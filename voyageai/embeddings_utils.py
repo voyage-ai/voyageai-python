@@ -15,7 +15,7 @@ from voyageai.datalib.pandas_helper import pandas as pd
 
 
 @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-def get_embedding(text: str, engine="text-embedding-ada-002", **kwargs) -> List[float]:
+def get_embedding(text: str, engine="voyage-api-v0", **kwargs) -> List[float]:
 
     # replace newlines, which can negatively affect performance.
     text = text.replace("\n", " ")
@@ -24,9 +24,7 @@ def get_embedding(text: str, engine="text-embedding-ada-002", **kwargs) -> List[
 
 
 @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-async def aget_embedding(
-    text: str, engine="text-embedding-ada-002", **kwargs
-) -> List[float]:
+async def aget_embedding(text: str, engine="voyage-api-v0", **kwargs) -> List[float]:
 
     # replace newlines, which can negatively affect performance.
     text = text.replace("\n", " ")
@@ -37,9 +35,7 @@ async def aget_embedding(
 
 
 @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-def get_embeddings(
-    list_of_text: List[str], engine="text-embedding-ada-002", **kwargs
-) -> List[List[float]]:
+def get_embeddings(list_of_text: List[str], engine="voyage-api-v0", **kwargs) -> List[List[float]]:
     assert len(list_of_text) <= 8191, "The batch size should not be larger than 8191."
 
     # replace newlines, which can negatively affect performance.
@@ -50,9 +46,7 @@ def get_embeddings(
 
 
 @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-async def aget_embeddings(
-    list_of_text: List[str], engine="text-embedding-ada-002", **kwargs
-) -> List[List[float]]:
+async def aget_embeddings(list_of_text: List[str], engine="voyage-api-v0", **kwargs) -> List[List[float]]:
     assert len(list_of_text) <= 8191, "The batch size should not be larger than 8191."
 
     # replace newlines, which can negatively affect performance.
