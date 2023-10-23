@@ -4,22 +4,23 @@ import voyageai
 
 class TestEmbedding:
 
-    model = "voyage-api-v0"
+    model = "voyage-langchain-api-v0"
+    sample_text = "This is a test query."
+    sample_texts = [
+        "This is a test query.",
+        "This is a test query 1.",
+        "This is a test query 2."
+    ]
 
     def test_create_embedding(self):
-        text = "This is a test query."
-        response = voyageai.Embedding.create(input=text, model=self.model)
+        
+        response = voyageai.Embedding.create(input=self.sample_text, model=self.model)
         assert "data" in response
         assert len(response["data"]) == 1
         assert len(response["data"][0]["embedding"]) == 1024
 
     def test_create_embedding_multiple(self):
-        texts = [
-            "This is a test query.",
-            "This is a test query 1.",
-            "This is a test query 2."
-        ]
-        response = voyageai.Embedding.create(input=texts, model=self.model)
+        response = voyageai.Embedding.create(input=self.sample_texts, model=self.model)
         assert "data" in response
         assert len(response["data"]) == 3
         for i in range(3):
@@ -27,21 +28,25 @@ class TestEmbedding:
 
     @pytest.mark.asyncio
     async def test_acreate_embedding(self):
-        text = "This is a test query."
-        response = await voyageai.Embedding.acreate(input=text, model=self.model)
+        response = await voyageai.Embedding.acreate(input=self.sample_text, model=self.model)
         assert "data" in response
         assert len(response["data"]) == 1
         assert len(response["data"][0]["embedding"]) == 1024
     
     @pytest.mark.asyncio
     async def test_acreate_embedding_multiple(self):
-        texts = [
-            "This is a test query.",
-            "This is a test query 1.",
-            "This is a test query 2."
-        ]
-        response = await voyageai.Embedding.acreate(input=texts, model=self.model)
+        response = await voyageai.Embedding.acreate(input=self.sample_texts, model=self.model)
         assert "data" in response
         assert len(response["data"]) == 3
         for i in range(3):
             assert len(response["data"][i]["embedding"]) == 1024
+
+    def test_get_embedding(self):
+        embd = voyageai.get_embedding(self.sample_text, model=self.model)
+        assert len(embd) == 1024
+
+    def test_get_embeddings(self):
+        embds = voyageai.get_embeddings(self.sample_texts, model=self.model)
+        assert len(embds) == 3
+        for i in range(3):
+            assert len(embds[i]) == 1024

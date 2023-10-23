@@ -16,14 +16,15 @@ The library needs to be configured with your VoyageAI API key. Either set it as 
 ```bash
 export VOYAGEAI_API_KEY="[ Your VoyageAI API key ]"
 ```
-Or set openai.api_key to its value:
+Or set voyageai.api_key to its value:
 ```python
 voyageai.api_key = "[ Your VoyageAI API key ]"
 ```
 
 ### Embedding
+The VoyageAI embedding is accessible through our API (see documentation at ...). This library provides Python SDKs for calling the embedding API.
 ```python
-text = "sample text"
+text = "This is a sample text."
 model = "voyage-api-v0"
 embedding = voyageai.Embedding.create(input=text, model=model)["data"][0]["embedding"]
 ```

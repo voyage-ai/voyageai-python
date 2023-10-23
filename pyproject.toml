@@ -6,9 +6,13 @@ authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.7.1"
 requests = "^2.20"
 aiohttp = "^3.5"
+scikit-learn = ">=1.0.2"
+tenacity = ">=8.0.1"
+plotly = ">=5.0.0"
+pandas = ">=1.2.3"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"

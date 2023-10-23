@@ -83,13 +83,6 @@ def logfmt(props):
     return " ".join([fmt(key, val) for key, val in sorted(props.items())])
 
 
-def get_object_classes():
-    # This is here to avoid a circular dependency
-    from voyageai.object_classes import OBJECT_CLASSES
-
-    return OBJECT_CLASSES
-
-
 def convert_to_voyageai_object(
     resp,
     api_key=None,
@@ -119,13 +112,7 @@ def convert_to_voyageai_object(
         resp, voyageai.voyageai_object.VoyageAIObject
     ):
         resp = resp.copy()
-        klass_name = resp.get("object")
-        if isinstance(klass_name, str):
-            klass = get_object_classes().get(
-                klass_name, voyageai.voyageai_object.VoyageAIObject
-            )
-        else:
-            klass = voyageai.voyageai_object.VoyageAIObject
+        klass = voyageai.voyageai_object.VoyageAIObject
 
         return klass.construct_from(
             resp,
