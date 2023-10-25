@@ -46,7 +46,7 @@ class TestEmbedding:
         assert len(embd) == 1024
 
     def test_get_embeddings(self):
-        embds = voyageai.get_embeddings(self.sample_texts, model=self.model)
+        embds = voyageai.get_embeddings(self.sample_texts, model=self.model, batch_size=2)
         assert len(embds) == 3
         for i in range(3):
             assert len(embds[i]) == 1024

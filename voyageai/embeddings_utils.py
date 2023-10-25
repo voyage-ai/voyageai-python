@@ -5,44 +5,10 @@ import plotly.express as px
 from scipy import spatial
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 import voyageai
 from voyageai.datalib.numpy_helper import numpy as np
 from voyageai.datalib.pandas_helper import pandas as pd
-
-
-EMBEDDING_MAX_BATCH_SIZE = 4
-
-
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-def get_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
-    return voyageai.Embedding.create(input=[text], model=model, **kwargs)["data"][0]["embedding"]
-
-
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-async def aget_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
-    return (await voyageai.Embedding.acreate(input=[text], model=model, **kwargs))["data"][0][
-        "embedding"
-    ]
-
-
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-def get_embeddings(list_of_text: List[str], model="voyage-01", **kwargs) -> List[List[float]]:
-    assert len(list_of_text) <= EMBEDDING_MAX_BATCH_SIZE, \
-        f"The batch size should not be larger than {EMBEDDING_MAX_BATCH_SIZE}."
-
-    data = voyageai.Embedding.create(input=list_of_text, model=model, **kwargs).data
-    return [d["embedding"] for d in data]
-
-
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-async def aget_embeddings(list_of_text: List[str], engine="voyage-api-v0", **kwargs) -> List[List[float]]:
-    assert len(list_of_text) <= EMBEDDING_MAX_BATCH_SIZE, \
-        f"The batch size should not be larger than {EMBEDDING_MAX_BATCH_SIZE}."
-
-    data = (await voyageai.Embedding.acreate(input=list_of_text, engine=engine, **kwargs)).data
-    return [d["embedding"] for d in data]
 
 
 def cosine_similarity(a, b):
