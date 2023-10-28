@@ -1,10 +1,9 @@
 import base64
 import time
+import numpy as np
 
 from voyageai import util
 from voyageai.api_resources.abstract.engine_api_resource import EngineAPIResource
-from voyageai.datalib.numpy_helper import assert_has_numpy
-from voyageai.datalib.numpy_helper import numpy as np
 from voyageai.error import TryAgain
 
 
@@ -38,7 +37,6 @@ class Embedding(EngineAPIResource):
 
                         # If an engine isn't using this optimization, don't do anything
                         if type(data["embedding"]) == str:
-                            assert_has_numpy()
                             data["embedding"] = np.frombuffer(
                                 base64.b64decode(data["embedding"]), dtype="float32"
                             ).tolist()

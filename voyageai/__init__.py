@@ -19,7 +19,7 @@ if "pkg_resources" not in sys.modules:
 from voyageai.api_resources import Embedding
 from voyageai.error import APIError, InvalidRequestError, VoyageError
 from voyageai.version import VERSION
-from voyageai.embeddings import get_embedding, get_embeddings
+from voyageai.embeddings import get_embedding, get_embeddings, aget_embedding, aget_embeddings
 
 if TYPE_CHECKING:
     import requests

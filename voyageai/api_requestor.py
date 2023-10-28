@@ -515,7 +515,6 @@ class APIRequestor:
         for key in list(headers.keys()):
             if key not in ["Authorization", "Content-Type"]:
                 headers.pop(key)
-        print(headers)
         return headers
 
     def _validate_headers(

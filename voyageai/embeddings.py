@@ -1,14 +1,15 @@
 import time
 import warnings 
 from typing import List, Optional
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 import voyageai
 
 
 MAX_BATCH_SIZE = 8
-MAX_NUM_REQUESTS_PER_SECOND = 10
 
 
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
 def get_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
     """Get Voyage embedding for a text string.
     
@@ -19,37 +20,44 @@ def get_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
     return voyageai.Embedding.create(input=[text], model=model, **kwargs)["data"][0]["embedding"]
 
 
-def get_embeddings(
-        list_of_text: List[str], 
-        model="voyage-01", 
-        batch_size: Optional[int] = None,
-        cooldown: float = 0.1,
-        show_progress_bar: bool = False,
-        **kwargs,
-    ) -> List[List[float]]:
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+def get_embeddings(list_of_text: List[str], model="voyage-01", **kwargs) -> List[List[float]]:
     """Get Voyage embedding for a list of text strings.
     
     Args:
         list_of_text (list): A list of text strings to embed.
         model (str): Name of the model to use. 
-        batch_size (int): Number of texts in each API request.
-        cooldown (float): Time in seconds to wait between consecutive API requests.
     """
-    batch_size = batch_size or MAX_BATCH_SIZE
+    assert len(list_of_text) <= MAX_BATCH_SIZE, \
+        f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
 
-    if cooldown < 1 / MAX_NUM_REQUESTS_PER_SECOND:
-        warnings.warn(f"Setting cooldown={cooldown} may exceed Voyage API's rate limit.")
+    data = voyageai.Embedding.create(input=list_of_text, model=model, **kwargs).data
+    return [d["embedding"] for d in data]
 
-    if show_progress_bar:
-        from tqdm.auto import tqdm
-        _iter = tqdm(range(0, len(list_of_text), batch_size))
-    else:
-        _iter = range(0, len(list_of_text), batch_size)
 
-    embeddings = []
-    for i in _iter:
-        data = voyageai.Embedding.create(input=list_of_text[i: i + batch_size], model=model, **kwargs).data
-        embeddings.extend([d["embedding"] for d in data])
-        time.sleep(cooldown)
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+async def aget_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
+    """Get Voyage embedding for a text string (async).
     
-    return embeddings
+    Args:
+        text (str): A text string to be embed.
+        model (str): Name of the model to use.
+    """
+    return (await voyageai.Embedding.acreate(input=[text], model=model, **kwargs))["data"][0][
+        "embedding"
+    ]
+
+
+@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+async def aget_embeddings(list_of_text: List[str], model="voyage-01", **kwargs) -> List[List[float]]:
+    """Get Voyage embedding for a list of text strings (async).
+    
+    Args:
+        list_of_text (list): A list of text strings to embed.
+        model (str): Name of the model to use. 
+    """
+    assert len(list_of_text) <= MAX_BATCH_SIZE, \
+        f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
+
+    data = (await voyageai.Embedding.acreate(input=list_of_text, model=model, **kwargs)).data
+    return [d["embedding"] for d in data]

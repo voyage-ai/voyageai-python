@@ -46,7 +46,19 @@ class TestEmbedding:
         assert len(embd) == 1024
 
     def test_get_embeddings(self):
-        embds = voyageai.get_embeddings(self.sample_texts, model=self.model, batch_size=2)
+        embds = voyageai.get_embeddings(self.sample_texts, model=self.model)
+        assert len(embds) == 3
+        for i in range(3):
+            assert len(embds[i]) == 1024
+    
+    @pytest.mark.asyncio
+    async def test_aget_embedding(self):
+        embd = await voyageai.aget_embedding(self.sample_text, model=self.model)
+        assert len(embd) == 1024
+
+    @pytest.mark.asyncio
+    async def test_aget_embeddings(self):
+        embds = await voyageai.aget_embeddings(self.sample_texts, model=self.model)
         assert len(embds) == 3
         for i in range(3):
             assert len(embds[i]) == 1024
