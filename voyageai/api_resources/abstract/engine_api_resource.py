@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 import voyageai
 from voyageai import api_requestor, error, util
 from voyageai.api_resources.abstract.api_resource import APIResource
-from voyageai.voyageai_response import VoyageAIResponse
+from voyageai.voyage_response import VoyageResponse
 from voyageai.util import ApiType
 
 MAX_TIMEOUT = 20
@@ -32,9 +32,9 @@ class EngineAPIResource(APIResource):
             api_type, api_version
         )
 
-        if typed_api_type == ApiType.VOYAGEAI:
+        if typed_api_type == ApiType.VOYAGE:
             if engine is None:
-                return "/%s/" % (base)
+                return "/%s" % (base)
 
             extn = quote_plus(engine)
             return "/engines/%s/%s" % (extn, base)
@@ -137,9 +137,9 @@ class EngineAPIResource(APIResource):
 
         if stream:
             # must be an iterator
-            assert not isinstance(response, VoyageAIResponse)
+            assert not isinstance(response, VoyageResponse)
             return (
-                util.convert_to_voyageai_object(
+                util.convert_to_voyage_object(
                     line,
                     api_key,
                     api_version,
@@ -150,7 +150,7 @@ class EngineAPIResource(APIResource):
                 for line in response
             )
         else:
-            obj = util.convert_to_voyageai_object(
+            obj = util.convert_to_voyage_object(
                 response,
                 api_key,
                 api_version,
@@ -201,9 +201,9 @@ class EngineAPIResource(APIResource):
 
         if stream:
             # must be an iterator
-            assert not isinstance(response, VoyageAIResponse)
+            assert not isinstance(response, VoyageResponse)
             return (
-                util.convert_to_voyageai_object(
+                util.convert_to_voyage_object(
                     line,
                     api_key,
                     api_version,
@@ -214,7 +214,7 @@ class EngineAPIResource(APIResource):
                 async for line in response
             )
         else:
-            obj = util.convert_to_voyageai_object(
+            obj = util.convert_to_voyage_object(
                 response,
                 api_key,
                 api_version,
@@ -240,7 +240,7 @@ class EngineAPIResource(APIResource):
         extn = quote_plus(id)
         params_connector = "?"
 
-        if self.typed_api_type == ApiType.VOYAGEAI:
+        if self.typed_api_type == ApiType.VOYAGE:
             base = self.class_url(self.engine, self.api_type, self.api_version)
             url = "%s/%s" % (base, extn)
 

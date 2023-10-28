@@ -30,7 +30,7 @@ else:
 
 import voyageai
 from voyageai import error, util, version
-from voyageai.voyageai_response import VoyageAIResponse
+from voyageai.voyage_response import VoyageResponse
 from voyageai.util import ApiType
 
 TIMEOUT_SECS = 600
@@ -154,7 +154,7 @@ class APIRequestor:
             str += " (%s)" % (info["url"],)
         return str
 
-    def _check_polling_response(self, response: VoyageAIResponse, predicate: Callable[[VoyageAIResponse], bool]):
+    def _check_polling_response(self, response: VoyageResponse, predicate: Callable[[VoyageResponse], bool]):
         if not predicate(response):
             return
         error_data = response.data['error']
@@ -172,7 +172,7 @@ class APIRequestor:
         headers = None,
         interval = None,
         delay = None
-    ) -> Tuple[Iterator[VoyageAIResponse], bool, str]:
+    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
         if delay:
             time.sleep(delay)
 
@@ -200,7 +200,7 @@ class APIRequestor:
         headers = None,
         interval = None,
         delay = None
-    ) -> Tuple[Iterator[VoyageAIResponse], bool, str]:
+    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
         if delay:
             await asyncio.sleep(delay)
 
@@ -229,7 +229,7 @@ class APIRequestor:
         stream: Literal[True],
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Iterator[VoyageAIResponse], bool, str]:
+    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
         pass
 
     @overload
@@ -244,7 +244,7 @@ class APIRequestor:
         stream: Literal[True],
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Iterator[VoyageAIResponse], bool, str]:
+    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
         pass
 
     @overload
@@ -258,7 +258,7 @@ class APIRequestor:
         stream: Literal[False] = ...,
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[VoyageAIResponse, bool, str]:
+    ) -> Tuple[VoyageResponse, bool, str]:
         pass
 
     @overload
@@ -272,7 +272,7 @@ class APIRequestor:
         stream: bool = ...,
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Union[VoyageAIResponse, Iterator[VoyageAIResponse]], bool, str]:
+    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool, str]:
         pass
 
     def request(
@@ -285,7 +285,7 @@ class APIRequestor:
         stream: bool = False,
         request_id: Optional[str] = None,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ) -> Tuple[Union[VoyageAIResponse, Iterator[VoyageAIResponse]], bool, str]:
+    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool, str]:
         result = self.request_raw(
             method.lower(),
             url,
@@ -310,7 +310,7 @@ class APIRequestor:
         stream: Literal[True],
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[AsyncGenerator[VoyageAIResponse, None], bool, str]:
+    ) -> Tuple[AsyncGenerator[VoyageResponse, None], bool, str]:
         pass
 
     @overload
@@ -325,7 +325,7 @@ class APIRequestor:
         stream: Literal[True],
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[AsyncGenerator[VoyageAIResponse, None], bool, str]:
+    ) -> Tuple[AsyncGenerator[VoyageResponse, None], bool, str]:
         pass
 
     @overload
@@ -339,7 +339,7 @@ class APIRequestor:
         stream: Literal[False] = ...,
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[VoyageAIResponse, bool, str]:
+    ) -> Tuple[VoyageResponse, bool, str]:
         pass
 
     @overload
@@ -353,7 +353,7 @@ class APIRequestor:
         stream: bool = ...,
         request_id: Optional[str] = ...,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Union[VoyageAIResponse, AsyncGenerator[VoyageAIResponse, None]], bool, str]:
+    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool, str]:
         pass
 
     async def arequest(
@@ -366,7 +366,7 @@ class APIRequestor:
         stream: bool = False,
         request_id: Optional[str] = None,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ) -> Tuple[Union[VoyageAIResponse, AsyncGenerator[VoyageAIResponse, None]], bool, str]:
+    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool, str]:
         ctx = AioHTTPSession()
         session = await ctx.__aenter__()
         result = None
@@ -424,7 +424,7 @@ class APIRequestor:
             error_data["message"] += "\n\n" + error_data["internal_message"]
 
         util.log_info(
-            "VoyageAI API error received",
+            "Voyage API error received",
             error_code=error_data.get("code"),
             error_type=error_data.get("type"),
             error_message=error_data.get("message"),
@@ -476,7 +476,7 @@ class APIRequestor:
     def request_headers(
         self, method: str, extra, request_id: Optional[str]
     ) -> Dict[str, str]:
-        user_agent = "VoyageAI/v1 PythonBindings/%s" % (version.VERSION,)
+        user_agent = "Voyage/v1 PythonBindings/%s" % (version.VERSION,)
         if voyageai.app_info:
             user_agent += " " + self.format_app_info(voyageai.app_info)
 
@@ -496,23 +496,26 @@ class APIRequestor:
             ua["application"] = voyageai.app_info
 
         headers = {
-            "X-VoyageAI-Client-User-Agent": json.dumps(ua),
+            "X-Voyage-Client-User-Agent": json.dumps(ua),
             "User-Agent": user_agent,
         }
 
         headers.update(util.api_key_to_header(self.api_type, self.api_key))
 
         if self.organization:
-            headers["VoyageAI-Organization"] = self.organization
+            headers["Voyage-Organization"] = self.organization
 
         if self.api_version is not None and self.api_type == ApiType.VOYAGEAI:
-            headers["VoyageAI-Version"] = self.api_version
+            headers["Voyage-Version"] = self.api_version
         if request_id is not None:
             headers["X-Request-Id"] = request_id
         if voyageai.debug:
-            headers["VoyageAI-Debug"] = "true"
+            headers["Voyage-Debug"] = "true"
         headers.update(extra)
-
+        for key in list(headers.keys()):
+            if key not in ["Authorization", "Content-Type"]:
+                headers.pop(key)
+        print(headers)
         return headers
 
     def _validate_headers(
@@ -571,7 +574,7 @@ class APIRequestor:
 
         headers = self.request_headers(method, headers, request_id)
 
-        util.log_debug("Request to VoyageAI API", method=method, path=abs_url)
+        util.log_debug("Request to Voyage API", method=method, path=abs_url)
         util.log_debug("Post details", data=data, api_version=self.api_version)
 
         return abs_url, headers, data
@@ -620,10 +623,10 @@ class APIRequestor:
                 "Error communicating with VoyageAI: {}".format(e)
             ) from e
         util.log_debug(
-            "VoyageAI API response",
+            "Voyage API response",
             path=abs_url,
             response_code=result.status_code,
-            processing_ms=result.headers.get("VoyageAI-Processing-Ms"),
+            processing_ms=result.headers.get("Voyage-Processing-Ms"),
             request_id=result.headers.get("X-Request-Id"),
         )
         # Don't read the whole stream for debug logging unless necessary.
@@ -677,10 +680,10 @@ class APIRequestor:
         try:
             result = await session.request(**request_kwargs)
             util.log_info(
-                "VoyageAI API response",
+                "Voyage API response",
                 path=abs_url,
                 response_code=result.status,
-                processing_ms=result.headers.get("VoyageAI-Processing-Ms"),
+                processing_ms=result.headers.get("Voyage-Processing-Ms"),
                 request_id=result.headers.get("X-Request-Id"),
             )
             # Don't read the whole stream for debug logging unless necessary.
@@ -692,11 +695,11 @@ class APIRequestor:
         except (aiohttp.ServerTimeoutError, asyncio.TimeoutError) as e:
             raise error.Timeout("Request timed out") from e
         except aiohttp.ClientError as e:
-            raise error.APIConnectionError("Error communicating with VoyageAI") from e
+            raise error.APIConnectionError("Error communicating with Voyage") from e
 
     def _interpret_response(
         self, result: requests.Response, stream: bool
-    ) -> Tuple[Union[VoyageAIResponse, Iterator[VoyageAIResponse]], bool]:
+    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool]:
         """Returns the response(s) and a bool indicating whether it is a stream."""
         if stream and "text/event-stream" in result.headers.get("Content-Type", ""):
             return (
@@ -718,7 +721,7 @@ class APIRequestor:
 
     async def _interpret_async_response(
         self, result: aiohttp.ClientResponse, stream: bool
-    ) -> Tuple[Union[VoyageAIResponse, AsyncGenerator[VoyageAIResponse, None]], bool]:
+    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool]:
         """Returns the response(s) and a bool indicating whether it is a stream."""
         if stream and "text/event-stream" in result.headers.get("Content-Type", ""):
             return (
@@ -746,10 +749,10 @@ class APIRequestor:
 
     def _interpret_response_line(
         self, rbody: str, rcode: int, rheaders, stream: bool
-    ) -> VoyageAIResponse:
+    ) -> VoyageResponse:
         # HTTP 204 response code does not have any content in the body.
         if rcode == 204:
-            return VoyageAIResponse(None, rheaders)
+            return VoyageResponse(None, rheaders)
 
         if rcode == 503:
             raise error.ServiceUnavailableError(
@@ -767,7 +770,7 @@ class APIRequestor:
             raise error.APIError(
                 f"HTTP code {rcode} from API ({rbody})", rbody, rcode, headers=rheaders
             ) from e
-        resp = VoyageAIResponse(data, rheaders)
+        resp = VoyageResponse(data, rheaders)
         # In the future, we might add a "status" parameter to errors
         # to better handle the "error while streaming" case.
         stream_error = stream and "error" in resp.data

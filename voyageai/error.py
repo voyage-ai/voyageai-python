@@ -1,7 +1,7 @@
 import voyageai
 
 
-class VoyageAIError(Exception):
+class VoyageError(Exception):
     def __init__(
         self,
         message=None,
@@ -11,7 +11,7 @@ class VoyageAIError(Exception):
         headers=None,
         code=None,
     ):
-        super(VoyageAIError, self).__init__(message)
+        super(VoyageError, self).__init__(message)
 
         if http_body and hasattr(http_body, "decode"):
             try:
@@ -30,7 +30,7 @@ class VoyageAIError(Exception):
         self.code = code
         self.request_id = self.headers.get("request-id", None)
         self.error = self.construct_error_object()
-        self.organization = self.headers.get("voyageai-organization", None)
+        self.organization = self.headers.get("voyage-organization", None)
 
     def __str__(self):
         msg = self._message or "<empty message>"
@@ -69,19 +69,19 @@ class VoyageAIError(Exception):
         )
 
 
-class APIError(VoyageAIError):
+class APIError(VoyageError):
     pass
 
 
-class TryAgain(VoyageAIError):
+class TryAgain(VoyageError):
     pass
 
 
-class Timeout(VoyageAIError):
+class Timeout(VoyageError):
     pass
 
 
-class APIConnectionError(VoyageAIError):
+class APIConnectionError(VoyageError):
     def __init__(
         self,
         message,
@@ -98,7 +98,7 @@ class APIConnectionError(VoyageAIError):
         self.should_retry = should_retry
 
 
-class InvalidRequestError(VoyageAIError):
+class InvalidRequestError(VoyageError):
     def __init__(
         self,
         message,
@@ -136,27 +136,27 @@ class InvalidRequestError(VoyageAIError):
         )
 
 
-class AuthenticationError(VoyageAIError):
+class AuthenticationError(VoyageError):
     pass
 
 
-class PermissionError(VoyageAIError):
+class PermissionError(VoyageError):
     pass
 
 
-class RateLimitError(VoyageAIError):
+class RateLimitError(VoyageError):
     pass
 
 
-class ServiceUnavailableError(VoyageAIError):
+class ServiceUnavailableError(VoyageError):
     pass
 
 
-class InvalidAPIType(VoyageAIError):
+class InvalidAPIType(VoyageError):
     pass
 
 
-class SignatureVerificationError(VoyageAIError):
+class SignatureVerificationError(VoyageError):
     def __init__(self, message, sig_header, http_body=None):
         super(SignatureVerificationError, self).__init__(message, http_body)
         self.sig_header = sig_header

@@ -1,6 +1,6 @@
-# VoyageAI Python bindings.
+# Voyage AI Python bindings.
 #
-# Originally forked from the MIT-licensed Stripe Python bindings.
+# Originally forked from the MIT-licensed OpenAI Python bindings.
 
 import os
 import sys
@@ -17,7 +17,7 @@ if "pkg_resources" not in sys.modules:
     del sys.modules["pkg_resources"]
 
 from voyageai.api_resources import Embedding
-from voyageai.error import APIError, InvalidRequestError, VoyageAIError
+from voyageai.error import APIError, InvalidRequestError, VoyageError
 from voyageai.version import VERSION
 from voyageai.embeddings import get_embedding, get_embeddings
 
@@ -25,16 +25,16 @@ if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession
 
-api_key = os.environ.get("VOYAGEAI_API_KEY")
+api_key = os.environ.get("VOYAGE_API_KEY")
 # Path of a file with an API key, whose contents can change. Supercedes
 # `api_key` if set.  The main use case is volume-mounted Kubernetes secrets,
 # which are updated automatically.
-api_key_path: Optional[str] = os.environ.get("VOYAGEAI_API_KEY_PATH")
+api_key_path: Optional[str] = os.environ.get("VOYAGE_API_KEY_PATH")
 
-organization = os.environ.get("VOYAGEAI_ORGANIZATION")
-api_base = os.environ.get("VOYAGEAI_API_BASE", "http://api.voyageai.com/stage/api/v0")
-api_type = os.environ.get("VOYAGEAI_API_TYPE", "voyageai")
-api_version = os.environ.get("VOYAGEAI_API_VERSION", None)
+organization = os.environ.get("VOYAGE_ORGANIZATION")
+api_base = os.environ.get("VOYAGE_API_BASE", "https://api.voyageai.com/v1")
+api_type = os.environ.get("VOYAGE_API_TYPE", "voyage")
+api_version = os.environ.get("VOYAGE_API_VERSION", None)
 verify_ssl_certs = True  # No effect. Certificates are always verified.
 proxy = None
 app_info = None

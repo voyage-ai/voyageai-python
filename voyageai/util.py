@@ -7,9 +7,9 @@ from typing import Optional
 
 import voyageai
 
-VOYAGEAI_LOG = os.environ.get("VOYAGEAI_LOG")
+VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
 
-logger = logging.getLogger("voyageai")
+logger = logging.getLogger("voyage")
 
 __all__ = [
     "log_info",
@@ -24,23 +24,23 @@ api_key_to_header = (
 
 
 class ApiType(Enum):
-    VOYAGEAI = 1
+    VOYAGE = 1
 
     @staticmethod
     def from_str(label):
-        if label.lower() in ("voyageai", "voyage_ai"):
-            return ApiType.VOYAGEAI
+        if label.lower() == "voyage":
+            return ApiType.VOYAGE
         else:
             raise voyageai.error.InvalidAPIType(
-                "The API type provided in invalid. Please select one of the supported API types: 'voyageai'"
+                "The API type provided in invalid. Please select one of the supported API types: 'voyage'"
             )
 
 
 def _console_log_level():
     if voyageai.log in ["debug", "info"]:
         return voyageai.log
-    elif VOYAGEAI_LOG in ["debug", "info"]:
-        return VOYAGEAI_LOG
+    elif VOYAGE_LOG in ["debug", "info"]:
+        return VOYAGE_LOG
     else:
         return None
 
@@ -83,7 +83,7 @@ def logfmt(props):
     return " ".join([fmt(key, val) for key, val in sorted(props.items())])
 
 
-def convert_to_voyageai_object(
+def convert_to_voyage_object(
     resp,
     api_key=None,
     api_version=None,
@@ -91,10 +91,10 @@ def convert_to_voyageai_object(
     engine=None,
     plain_old_data=False,
 ):
-    # If we get a VoyageAIResponse, we'll want to return a VoyageAIObject.
+    # If we get a VoyageResponse, we'll want to return a VoyageObject.
 
     response_ms: Optional[int] = None
-    if isinstance(resp, voyageai.voyageai_response.VoyageAIResponse):
+    if isinstance(resp, voyageai.voyage_response.VoyageResponse):
         organization = resp.organization
         response_ms = resp.response_ms
         resp = resp.data
@@ -103,16 +103,16 @@ def convert_to_voyageai_object(
         return resp
     elif isinstance(resp, list):
         return [
-            convert_to_voyageai_object(
+            convert_to_voyage_object(
                 i, api_key, api_version, organization, engine=engine
             )
             for i in resp
         ]
     elif isinstance(resp, dict) and not isinstance(
-        resp, voyageai.voyageai_object.VoyageAIObject
+        resp, voyageai.voyage_object.VoyageObject
     ):
         resp = resp.copy()
-        klass = voyageai.voyageai_object.VoyageAIObject
+        klass = voyageai.voyage_object.VoyageObject
 
         return klass.construct_from(
             resp,
@@ -127,17 +127,17 @@ def convert_to_voyageai_object(
 
 
 def convert_to_dict(obj):
-    """Converts a VoyageAIObject back to a regular dict.
+    """Converts a VoyageObject back to a regular dict.
 
-    Nested VoyageAIObjects are also converted back to regular dicts.
+    Nested VoyageObjects are also converted back to regular dicts.
 
-    :param obj: The VoyageAIObject to convert.
+    :param obj: The VoyageObject to convert.
 
-    :returns: The VoyageAIObject as a dict.
+    :returns: The VoyageObject as a dict.
     """
     if isinstance(obj, list):
         return [convert_to_dict(i) for i in obj]
-    # This works by virtue of the fact that VoyageAIObjects _are_ dicts. The dict
+    # This works by virtue of the fact that VoyageObjects _are_ dicts. The dict
     # comprehension returns a regular dict and recursively applies the
     # conversion to each value.
     elif isinstance(obj, dict):
@@ -164,7 +164,7 @@ def default_api_key() -> str:
     else:
         raise voyageai.error.AuthenticationError(
             "No API key provided. You can set your API key in code using 'voyageai.api_key = <API-KEY>', "
-            "or you can set the environment variable VOYAGEAI_API_KEY=<API-KEY>). If your API key is stored "
+            "or you can set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
             "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>'. "
-            "You can generate API keys in the VoyageAI web interface. See https://{{TODO}} for details."
+            "You can generate API keys in the Voyage web interface. See https://{{TODO}} for details."
         )

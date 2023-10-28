@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-class VoyageAIResponse:
+class VoyageResponse:
     def __init__(self, data, headers):
         self._headers = headers
         self.data = data
@@ -23,9 +23,9 @@ class VoyageAIResponse:
 
     @property
     def organization(self) -> Optional[str]:
-        return self._headers.get("VoyageAI-Organization")
+        return self._headers.get("Voyage-Organization")
 
     @property
     def response_ms(self) -> Optional[int]:
-        h = self._headers.get("VoyageAI-Processing-Ms")
+        h = self._headers.get("Voyage-Processing-Ms")
         return None if h is None else round(float(h))

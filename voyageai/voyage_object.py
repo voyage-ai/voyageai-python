@@ -4,11 +4,11 @@ from typing import Optional, Tuple, Union
 
 import voyageai
 from voyageai import api_requestor, util
-from voyageai.voyageai_response import VoyageAIResponse
+from voyageai.voyage_response import VoyageResponse
 from voyageai.util import ApiType
 
 
-class VoyageAIObject(dict):
+class VoyageObject(dict):
     api_base_override = None
 
     def __init__(
@@ -23,7 +23,7 @@ class VoyageAIObject(dict):
         engine=None,
         **params,
     ):
-        super(VoyageAIObject, self).__init__()
+        super(VoyageObject, self).__init__()
 
         if response_ms is not None and not isinstance(response_ms, int):
             raise TypeError(f"response_ms is a {type(response_ms).__name__}.")
@@ -47,7 +47,7 @@ class VoyageAIObject(dict):
 
     def __setattr__(self, k, v):
         if k[0] == "_" or k in self.__dict__:
-            return super(VoyageAIObject, self).__setattr__(k, v)
+            return super(VoyageObject, self).__setattr__(k, v)
 
         self[k] = v
         return None
@@ -62,7 +62,7 @@ class VoyageAIObject(dict):
 
     def __delattr__(self, k):
         if k[0] == "_" or k in self.__dict__:
-            return super(VoyageAIObject, self).__delattr__(k)
+            return super(VoyageObject, self).__delattr__(k)
         else:
             del self[k]
 
@@ -73,7 +73,7 @@ class VoyageAIObject(dict):
                 "We interpret empty strings as None in requests."
                 "You may set %s.%s = None to delete the property" % (k, str(self), k)
             )
-        super(VoyageAIObject, self).__setitem__(k, v)
+        super(VoyageObject, self).__setitem__(k, v)
 
     def __delitem__(self, k):
         raise NotImplementedError("del is not supported")
@@ -146,8 +146,8 @@ class VoyageAIObject(dict):
         # Wipe old state before setting new.
         self.clear()
         for k, v in values.items():
-            super(VoyageAIObject, self).__setitem__(
-                k, util.convert_to_voyageai_object(v, api_key, api_version, organization)
+            super(VoyageObject, self).__setitem__(
+                k, util.convert_to_voyage_object(v, api_key, api_version, organization)
             )
 
         self._previous = values
@@ -187,9 +187,9 @@ class VoyageAIObject(dict):
         )
 
         if stream:
-            assert not isinstance(response, VoyageAIResponse)  # must be an iterator
+            assert not isinstance(response, VoyageResponse)  # must be an iterator
             return (
-                util.convert_to_voyageai_object(
+                util.convert_to_voyage_object(
                     line,
                     api_key,
                     self.api_version,
@@ -199,7 +199,7 @@ class VoyageAIObject(dict):
                 for line in response
             )
         else:
-            return util.convert_to_voyageai_object(
+            return util.convert_to_voyage_object(
                 response,
                 api_key,
                 self.api_version,
@@ -238,9 +238,9 @@ class VoyageAIObject(dict):
         )
 
         if stream:
-            assert not isinstance(response, VoyageAIResponse)  # must be an iterator
+            assert not isinstance(response, VoyageResponse)  # must be an iterator
             return (
-                util.convert_to_voyageai_object(
+                util.convert_to_voyage_object(
                     line,
                     api_key,
                     self.api_version,
@@ -250,7 +250,7 @@ class VoyageAIObject(dict):
                 for line in response
             )
         else:
-            return util.convert_to_voyageai_object(
+            return util.convert_to_voyage_object(
                 response,
                 api_key,
                 self.api_version,
@@ -286,17 +286,17 @@ class VoyageAIObject(dict):
     def to_dict_recursive(self):
         d = dict(self)
         for k, v in d.items():
-            if isinstance(v, VoyageAIObject):
+            if isinstance(v, VoyageObject):
                 d[k] = v.to_dict_recursive()
             elif isinstance(v, list):
                 d[k] = [
-                    e.to_dict_recursive() if isinstance(e, VoyageAIObject) else e
+                    e.to_dict_recursive() if isinstance(e, VoyageObject) else e
                     for e in v
                 ]
         return d
 
     @property
-    def voyageai_id(self):
+    def voyage_id(self):
         return self.id
 
     @property
@@ -313,7 +313,7 @@ class VoyageAIObject(dict):
     # if it was set to be set manually. Here we override the class' copy
     # arguments so that we can bypass these possible exceptions on __setitem__.
     def __copy__(self):
-        copied = VoyageAIObject(
+        copied = VoyageObject(
             self.get("id"),
             self.api_key,
             api_version=self.api_version,
@@ -326,7 +326,7 @@ class VoyageAIObject(dict):
         for k, v in self.items():
             # Call parent's __setitem__ to avoid checks that we've added in the
             # overridden version that can throw exceptions.
-            super(VoyageAIObject, copied).__setitem__(k, v)
+            super(VoyageObject, copied).__setitem__(k, v)
 
         return copied
 
@@ -342,6 +342,6 @@ class VoyageAIObject(dict):
         for k, v in self.items():
             # Call parent's __setitem__ to avoid checks that we've added in the
             # overridden version that can throw exceptions.
-            super(VoyageAIObject, copied).__setitem__(k, deepcopy(v, memo))
+            super(VoyageObject, copied).__setitem__(k, deepcopy(v, memo))
 
         return copied

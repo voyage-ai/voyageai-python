@@ -2,12 +2,12 @@ from urllib.parse import quote_plus
 
 import voyageai
 from voyageai import api_requestor, error, util
-from voyageai.voyageai_object import VoyageAIObject
+from voyageai.voyage_object import VoyageObject
 from voyageai.util import ApiType
 from typing import Optional
 
 
-class APIResource(VoyageAIObject):
+class APIResource(VoyageObject):
     api_prefix = ""
 
     @classmethod
@@ -73,7 +73,7 @@ class APIResource(VoyageAIObject):
         api_version = self.api_version or voyageai.api_version
         extn = quote_plus(id)
 
-        if self.typed_api_type == ApiType.VOYAGEAI:
+        if self.typed_api_type == ApiType.VOYAGE:
             base = self.class_url()
             return "%s/%s" % (base, extn)
 
@@ -105,7 +105,7 @@ class APIResource(VoyageAIObject):
         response, _, api_key = requestor.request(
             method_, url_, params, request_id=request_id
         )
-        return util.convert_to_voyageai_object(
+        return util.convert_to_voyage_object(
             response, api_key, api_version, organization
         )
 

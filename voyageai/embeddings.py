@@ -10,7 +10,7 @@ MAX_NUM_REQUESTS_PER_SECOND = 10
 
 
 def get_embedding(text: str, model="voyage-01", **kwargs) -> List[float]:
-    """Get VoyageAI embedding for a text string.
+    """Get Voyage embedding for a text string.
     
     Args:
         text (str): A text string to be embed.
@@ -27,7 +27,7 @@ def get_embeddings(
         show_progress_bar: bool = False,
         **kwargs,
     ) -> List[List[float]]:
-    """Get VoyageAI embedding for a list of text strings.
+    """Get Voyage embedding for a list of text strings.
     
     Args:
         list_of_text (list): A list of text strings to embed.
@@ -38,7 +38,7 @@ def get_embeddings(
     batch_size = batch_size or MAX_BATCH_SIZE
 
     if cooldown < 1 / MAX_NUM_REQUESTS_PER_SECOND:
-        warnings.warn(f"Setting cooldown={cooldown} may exceed VoyageAI's rate limit.")
+        warnings.warn(f"Setting cooldown={cooldown} may exceed Voyage API's rate limit.")
 
     if show_progress_bar:
         from tqdm.auto import tqdm
