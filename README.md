@@ -49,6 +49,7 @@ Voyage offers two embedding model options: **`voyage-01`** and **`voyage-lite-01
 | --- | --- | --- | --- | --- |
 | `voyage-01` | 4096 | 1024 | ++++ | ++++ |
 | `voyage-lite-01` | 4096 | 1024 | +++ | +++ |
+| `voyage-lite-01-instruct` | 4096 | 1024 | +++ | +++ |
 | `voyage-xl-01` | coming soon  |  |  |  |
 | `voyage-code-01` | coming soon |  |  |  |
 | `voyage-finance-01` | coming soon |  |  |  |
