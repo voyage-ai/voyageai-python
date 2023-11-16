@@ -13,7 +13,6 @@ class TestEmbedding:
     ]
 
     def test_create_embedding(self):
-        
         response = voyageai.Embedding.create(input=self.sample_text, model=self.model)
         assert "data" in response
         assert len(response["data"]) == 1
@@ -62,3 +61,10 @@ class TestEmbedding:
         assert len(embds) == 3
         for i in range(3):
             assert len(embds[i]) == 1024
+
+    def test_get_embedding_input_type(self):
+        query_embd = voyageai.get_embedding(self.sample_text, model=self.model, input_type="query")
+        doc_embd = voyageai.get_embedding(self.sample_text, model=self.model, input_type="document")
+        assert len(query_embd) == 1024
+        assert len(doc_embd) == 1024
+        assert(query_embd[0]) != doc_embd[0]

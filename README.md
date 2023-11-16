@@ -62,15 +62,17 @@ The core functions are `get_embedding()` that takes a single document (or query)
 - **Parameters**
     - **text** - A single document/query as a string, such as `"I like cats"` .
     - **model** - Name of the model. Options: `"voyage-01"`, `"voyage-lite-01"`.
+    - **input_type** - Type of the input text. Defalut to None, meaning the type is unspecified. Other options include: "query", "document".
 - **Returns**
     - An embedding vector (a list of floating-point numbers) for the document.
 
 
-> `get_embeddings(list_of_texts, model)` [🔗](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L22)
+> `get_embeddings(list_of_text, model)` [🔗](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L22)
 
 - **Parameters**
     - **list_of_text** - A list of documents as a list of strings, such as  `["I like cats", "I also like dogs"]`. The length of the list is at most 8. This function only makes one API call, which takes a list of at most 8 strings.
     - **model** - Name of the model. Options: `"voyage-01"`, `"voyage-lite-01"`.
+    - **input_type** - Type of the input text. Defalut to None, meaning the type is unspecified. Other options include: "query", "document".
 - **Returns**
     - A list of embedding vectors.
 
@@ -80,7 +82,7 @@ Given a list of documents, obtain the embeddings from Voyage Python package.
 
 ```python
 import voyageai 
-from voyageai import get_embedding
+from voyageai import get_embeddings
 
 voyageai.api_key = "[ Your Voyage API KEY ]"  # add you Voyage API KEY
 
