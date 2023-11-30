@@ -14,8 +14,6 @@ class Embedding(EngineAPIResource):
     def create(cls, *args, **kwargs):
         """
         Creates a new embedding for the provided input and parameters.
-
-        See https://{{ TODO }} for a list of valid parameters.
         """
         start = time.time()
         timeout = kwargs.pop("timeout", None)
@@ -52,8 +50,6 @@ class Embedding(EngineAPIResource):
     async def acreate(cls, *args, **kwargs):
         """
         Creates a new embedding for the provided input and parameters.
-
-        See https://{{ TODO }} for a list of valid parameters.
         """
         start = time.time()
         timeout = kwargs.pop("timeout", None)
