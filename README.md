@@ -41,39 +41,40 @@ voyageai.api_key = "[ Your VOYAGE API key ]"
 
 ## Voyage Embeddings
 
-### Models and specifics
+## Models and specifics
 
-Voyage offers two embedding model options: **`voyage-01`** and **`voyage-lite-01`**. The former provides the best quality and the latter is optimized for inference-time efficiency.  More advanced and specialized models are coming soon and please contact [contact@voyageail.com](mailto:contact@voyageail.com) for early access.
+Voyage currently provides three embedding models. All models currently have context length = 4096 (tokens) and embedding dimension = 1024. 
 
-| Model Name | Context Length (tokens) | Embedding Dim. | Latency | Quality |
-| --- | --- | --- | --- | --- |
-| `voyage-01` | 4096 | 1024 | ++++ | ++++ |
-| `voyage-lite-01` | 4096 | 1024 | +++ | +++ |
-| `voyage-lite-01-instruct` | 4096 | 1024 | +++ | +++ |
-| `voyage-xl-01` | coming soon  |  |  |  |
-| `voyage-code-01` | coming soon |  |  |  |
-| `voyage-finance-01` | coming soon |  |  |  |
+- `voyage-01`: the default choice with the best retrieval quality (e.g., better than OpenAI embedding models — see [blog post](https://blog.voyageai.com/2023/10/29/voyage-embeddings/) for details.) 
+- `voyage-lite-01`: 2x faster inference than `voyage-01` with nearly the same retrieval quality. 
+- `voyage-lite-01-instruct`: tweaked on top of `voyage-lite-01` for classification and clustering tasks, which are the only recommended use cases.
+
+More advanced and specialized models are coming soon and please contact [contact@voyageai.com](mailto:contact@voyageai.com) for early access.
+
+- `voyage-xl-01`: coming soon
+- `voyage-code-01`: coming soon
+- `voyage-finance-01`: coming soon
 
 ### Functions
 
-The core functions are `get_embedding()` that takes a single document (or query), and `get_embeddings()` , which allows a batch of documents or queries.  Before using the library, please first register for a [Voyage API key](https://docs.voyageai.com/install/).
+he core functions are `get_embedding` that takes a single document (or query), and `get_embeddings`, which allows a batch of documents or queries.  Before using the library, please first register for a [Voyage API key](#authentication-with-api-keys).
 
-> `get_embedding(text, model)` [🔗](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L12)
+> `get_embedding(text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L13)
 
 - **Parameters**
     - **text** - A single document/query as a string, such as `"I like cats"` .
-    - **model** - Name of the model. Options: `"voyage-01"`, `"voyage-lite-01"`.
-    - **input_type** - Type of the input text. Defalut to None, meaning the type is unspecified. Other options include: "query", "document".
+    - **model** - Name of the model. Options: `voyage-01`, `voyage-lite-01`.
+    - **input_type** - Type of the input text. Defalut to `None`, meaning the type is unspecified. Other options:  `query`, `document`.
 - **Returns**
     - An embedding vector (a list of floating-point numbers) for the document.
 
 
-> `get_embeddings(list_of_text, model)` [🔗](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L22)
+> `get_embeddings(list_of_text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L34)
 
 - **Parameters**
-    - **list_of_text** - A list of documents as a list of strings, such as  `["I like cats", "I also like dogs"]`. The length of the list is at most 8. This function only makes one API call, which takes a list of at most 8 strings.
-    - **model** - Name of the model. Options: `"voyage-01"`, `"voyage-lite-01"`.
-    - **input_type** - Type of the input text. Defalut to None, meaning the type is unspecified. Other options include: "query", "document".
+    - **list_of_text** - A list of documents as a list of strings, such as  `["I like cats", "I also like dogs"]`. The length of the list is at most 64. (Each Voyage API request takes at most 8 strings. This function makes one API request when `len(list_of_text)<=8`, and makes multiple API requests in parallel when `8<len(list_of_text)<=64`.)
+    - **model** - Name of the model. Options: `voyage-01`, `voyage-lite-01`.
+    - **input_type** - Type of the input text. Defalut to `None`, meaning the type is unspecified. Other options: `query`, `document`.
 - **Returns**
     - A list of embedding vectors.
 
@@ -97,5 +98,5 @@ documents = [
 ]
 
 # Embed the documents
-embeddings = get_embeddings(documents, model="voyage-01")
+embeddings = get_embeddings(documents, model="voyage-01", input_type="document")
 ```

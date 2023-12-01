@@ -20,6 +20,7 @@ def _get_embeddings(
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[List[float]]:
+    """Python wrapper for one Voyage API call."""
     _check_input_type(input_type)
     assert len(list_of_text) <= MAX_BATCH_SIZE, \
         f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
@@ -37,6 +38,7 @@ async def _aget_embeddings(
     input_type: Optional[str] = None,
     **kwargs,
 ) -> List[List[float]]:
+    """Python wrapper for one async Voyage API call."""
     _check_input_type(input_type)
     assert len(list_of_text) <= MAX_BATCH_SIZE, \
         f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
@@ -51,7 +53,12 @@ async def _aget_embeddings(
             ).data
     
     return [d["embedding"] for d in data]
-    
+
+
+def _check_input_type(input_type: str):
+    if input_type and input_type not in ["query", "document"]:
+        raise ValueError(f"input_type {input_type} is invalid. Options: None, 'query', 'document'.")
+
 
 def get_embedding(
     text: str, 
@@ -137,7 +144,3 @@ async def aget_embeddings(
     results = await asyncio.gather(*async_tasks)
     return sum(results, [])
 
-
-def _check_input_type(input_type: str):
-    if input_type and input_type not in ["query", "document"]:
-        raise ValueError(f"input_type {input_type} is invalid. Options: None, 'query', 'document'.")
