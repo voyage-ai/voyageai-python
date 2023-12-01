@@ -59,7 +59,7 @@ More advanced and specialized models are coming soon and please contact [contact
 
 he core functions are `get_embedding` that takes a single document (or query), and `get_embeddings`, which allows a batch of documents or queries.  Before using the library, please first register for a [Voyage API key](#authentication-with-api-keys).
 
-> `get_embedding(text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L13)
+> `get_embedding(text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/d95621a0f837a791912945edeeeae47325c5d602/voyageai/embeddings.py#L63)
 
 - **Parameters**
     - **text** - A single document/query as a string, such as `"I like cats"` .
@@ -69,7 +69,7 @@ he core functions are `get_embedding` that takes a single document (or query), a
     - An embedding vector (a list of floating-point numbers) for the document.
 
 
-> `get_embeddings(list_of_text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/main/voyageai/embeddings.py#L34)
+> `get_embeddings(list_of_text, model, input_type=None)` [:link:](https://github.com/voyage-ai/voyageai-python/blob/d95621a0f837a791912945edeeeae47325c5d602/voyageai/embeddings.py#L80)
 
 - **Parameters**
     - **list_of_text** - A list of documents as a list of strings, such as  `["I like cats", "I also like dogs"]`. The length of the list is at most 64. (Each Voyage API request takes at most 8 strings. This function makes one API request when `len(list_of_text)<=8`, and makes multiple API requests in parallel when `8<len(list_of_text)<=64`.)
