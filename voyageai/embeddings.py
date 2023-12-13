@@ -2,7 +2,8 @@ import asyncio
 from aiolimiter import AsyncLimiter
 from typing import List, Optional
 from contextlib import nullcontext, AsyncExitStack
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+from tenacity import retry, stop_after_attempt, wait_random_exponential, retry_if_exception_type
+from concurrent.futures import ThreadPoolExecutor
 
 import voyageai
 
@@ -13,7 +14,11 @@ DEFAULT_CONCURRENCE = 8
 DEFAULT_RPM = 300
 
 
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+@retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        retry=retry_if_exception_type(voyageai.error.RateLimitError),
+    )
 def _get_embeddings(
     list_of_text: List[str], 
     model: str ="voyage-01", 
@@ -31,7 +36,11 @@ def _get_embeddings(
     return [d["embedding"] for d in data]
 
 
-@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
+@retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        retry=retry_if_exception_type(voyageai.error.RateLimitError),
+    )
 async def _aget_embeddings(
     list_of_text: List[str],
     model: str ="voyage-01",
@@ -91,7 +100,25 @@ def get_embeddings(
         input_type (str): Type of the input text. Defalut to None, meaning the type is unspecified.
             Other options include: "query", "document".
     """
-    return asyncio.run(aget_embeddings(list_of_text, model, input_type, **kwargs))
+    if len(list_of_text) <= MAX_BATCH_SIZE:
+        return _get_embeddings(list_of_text, model, input_type, **kwargs)
+
+    assert len(list_of_text) <= MAX_LIST_LENGTH, \
+        f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
+    
+    batches = [
+        list_of_text[i:i + MAX_BATCH_SIZE]
+        for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
+    ]
+
+    with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCE) as executor:
+        futures = [
+            executor.submit(_get_embeddings, batch, model, input_type)
+            for batch in batches
+        ]
+    
+    results = [future.result() for future in futures]
+    return sum(results, [])
 
 
 async def aget_embedding(text: str, 

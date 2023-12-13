@@ -166,5 +166,5 @@ def default_api_key() -> str:
             "No API key provided. You can set your API key in code using 'voyageai.api_key = <API-KEY>', "
             "or you can set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
             "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>'. "
-            "You can generate API keys in the Voyage web interface. See https://{{TODO}} for details."
+            "You can generate API keys in the Voyage web interface."
         )

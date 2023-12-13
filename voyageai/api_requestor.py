@@ -410,7 +410,7 @@ class APIRequestor:
 
     def handle_error_response(self, rbody, rcode, resp, rheaders, stream_error=False):
         try:
-            error_data = resp["error"]
+            error_message = resp["detail"]
         except (KeyError, TypeError):
             raise error.APIError(
                 "Invalid response object from API: %r (HTTP response code "
@@ -420,53 +420,33 @@ class APIRequestor:
                 resp,
             )
 
-        if "internal_message" in error_data:
-            error_data["message"] += "\n\n" + error_data["internal_message"]
-
         util.log_info(
-            "Voyage API error received",
-            error_code=error_data.get("code"),
-            error_type=error_data.get("type"),
-            error_message=error_data.get("message"),
-            error_param=error_data.get("param"),
-            stream_error=stream_error,
+            "Voyage API error received", error_message=error_message,
         )
 
-        # Rate limits were previously coded as 400's with code 'rate_limit'
         if rcode == 429:
             return error.RateLimitError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                error_message, rbody, rcode, resp, rheaders
             )
-        elif rcode in [400, 404, 415]:
+        elif rcode == 400:
             return error.InvalidRequestError(
-                error_data.get("message"),
-                error_data.get("param"),
-                error_data.get("code"),
-                rbody,
-                rcode,
-                resp,
-                rheaders,
+                error_message, rbody, rcode, resp, rheaders
             )
         elif rcode == 401:
             return error.AuthenticationError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                error_message, rbody, rcode, resp, rheaders
             )
-        elif rcode == 403:
-            return error.PermissionError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
-            )
-        elif rcode == 409:
-            return error.TryAgain(
-                error_data.get("message"), rbody, rcode, resp, rheaders
-            )
-        elif stream_error:
-            # TODO: we will soon attach status codes to stream errors
-            parts = [error_data.get("message"), "(Error occurred while streaming.)"]
-            message = " ".join([p for p in parts if p is not None])
-            return error.APIError(message, rbody, rcode, resp, rheaders)
+        # elif rcode == 403:
+        #     return error.PermissionError(
+        #         error_data.get("message"), rbody, rcode, resp, rheaders
+        #     )
+        # elif rcode == 409:
+        #     return error.TryAgain(
+        #         error_data.get("message"), rbody, rcode, resp, rheaders
+        #     )
         else:
             return error.APIError(
-                f"{error_data.get('message')} {rbody} {rcode} {resp} {rheaders}",
+                f"{error_message} {rbody} {rcode} {resp} {rheaders}",
                 rbody,
                 rcode,
                 resp,
