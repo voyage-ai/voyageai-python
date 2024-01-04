@@ -3,10 +3,9 @@ from pydoc import apropos
 from typing import Optional
 from urllib.parse import quote_plus
 
-import voyageai
-from voyageai import api_requestor, error, util
+from voyageai import error, util
+from voyageai.api_resources import api_requestor
 from voyageai.api_resources.abstract.api_resource import APIResource
-from voyageai.voyage_response import VoyageResponse
 from voyageai.util import ApiType
 
 MAX_TIMEOUT = 20
@@ -28,19 +27,7 @@ class EngineAPIResource(APIResource):
         # Namespaces are separated in object names with periods (.) and in URLs
         # with forward slashes (/), so replace the former with the latter.
         base = cls.OBJECT_NAME.replace(".", "/")  # type: ignore
-        typed_api_type, api_version = cls._get_api_type_and_version(
-            api_type, api_version
-        )
-
-        if typed_api_type == ApiType.VOYAGE:
-            if engine is None:
-                return "/%s" % (base)
-
-            extn = quote_plus(engine)
-            return "/engines/%s/%s" % (extn, base)
-
-        else:
-            raise error.InvalidAPIType("Unsupported API type %s" % api_type)
+        return "/%s" % (base)
 
     @classmethod
     def __prepare_create_request(
@@ -135,33 +122,7 @@ class EngineAPIResource(APIResource):
             request_timeout=request_timeout,
         )
 
-        if stream:
-            # must be an iterator
-            assert not isinstance(response, VoyageResponse)
-            return (
-                util.convert_to_voyage_object(
-                    line,
-                    api_key,
-                    api_version,
-                    organization,
-                    engine=engine,
-                    plain_old_data=cls.plain_old_data,
-                )
-                for line in response
-            )
-        else:
-            obj = util.convert_to_voyage_object(
-                response,
-                api_key,
-                api_version,
-                organization,
-                engine=engine,
-                plain_old_data=cls.plain_old_data,
-            )
-
-            if timeout is not None:
-                obj.wait(timeout=timeout or None)
-
+        obj = util.convert_to_voyage_object(response)
         return obj
 
     @classmethod
@@ -199,33 +160,7 @@ class EngineAPIResource(APIResource):
             request_timeout=request_timeout,
         )
 
-        if stream:
-            # must be an iterator
-            assert not isinstance(response, VoyageResponse)
-            return (
-                util.convert_to_voyage_object(
-                    line,
-                    api_key,
-                    api_version,
-                    organization,
-                    engine=engine,
-                    plain_old_data=cls.plain_old_data,
-                )
-                async for line in response
-            )
-        else:
-            obj = util.convert_to_voyage_object(
-                response,
-                api_key,
-                api_version,
-                organization,
-                engine=engine,
-                plain_old_data=cls.plain_old_data,
-            )
-
-            if timeout is not None:
-                await obj.await_(timeout=timeout or None)
-
+        obj = util.convert_to_voyage_object(response)
         return obj
 
     def instance_url(self):

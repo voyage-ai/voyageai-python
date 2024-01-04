@@ -30,7 +30,7 @@ else:
 
 import voyageai
 from voyageai import error, util, version
-from voyageai.voyage_response import VoyageResponse
+from voyageai.api_resources.voyage_response import VoyageResponse
 from voyageai.util import ApiType
 
 TIMEOUT_SECS = 600

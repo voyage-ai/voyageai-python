@@ -83,29 +83,15 @@ def logfmt(props):
     return " ".join([fmt(key, val) for key, val in sorted(props.items())])
 
 
-def convert_to_voyage_object(
-    resp,
-    api_key=None,
-    api_version=None,
-    organization=None,
-    engine=None,
-    plain_old_data=False,
-):
+def convert_to_voyage_object(resp):
     # If we get a VoyageResponse, we'll want to return a VoyageObject.
 
-    response_ms: Optional[int] = None
     if isinstance(resp, voyageai.voyage_response.VoyageResponse):
-        organization = resp.organization
-        response_ms = resp.response_ms
         resp = resp.data
 
-    if plain_old_data:
-        return resp
-    elif isinstance(resp, list):
+    if isinstance(resp, list):
         return [
-            convert_to_voyage_object(
-                i, api_key, api_version, organization, engine=engine
-            )
+            convert_to_voyage_object(i)
             for i in resp
         ]
     elif isinstance(resp, dict) and not isinstance(
@@ -114,14 +100,7 @@ def convert_to_voyage_object(
         resp = resp.copy()
         klass = voyageai.voyage_object.VoyageObject
 
-        return klass.construct_from(
-            resp,
-            api_key=api_key,
-            api_version=api_version,
-            organization=organization,
-            response_ms=response_ms,
-            engine=engine,
-        )
+        return klass.construct_from(resp)
     else:
         return resp
 
@@ -156,8 +135,6 @@ def default_api_key() -> str:
     if voyageai.api_key_path:
         with open(voyageai.api_key_path, "rt") as k:
             api_key = k.read().strip()
-            if not api_key.startswith("sk-"):
-                raise ValueError(f"Malformed API key in {voyageai.api_key_path}.")
             return api_key
     elif voyageai.api_key is not None:
         return voyageai.api_key
@@ -166,5 +143,5 @@ def default_api_key() -> str:
             "No API key provided. You can set your API key in code using 'voyageai.api_key = <API-KEY>', "
             "or you can set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
             "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>'. "
-            "You can generate API keys in the Voyage web interface."
+            "You can generate API keys in Voyage AI's dashboard (https://dash.voyageai.com)."
         )

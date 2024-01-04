@@ -16,9 +16,14 @@ if "pkg_resources" not in sys.modules:
 
     del sys.modules["pkg_resources"]
 
+VOYAGE_EMBED_BATCH_SIZE = 128
+VOYAGE_EMBED_DEFAULT_MODEL = "voyage-02"
+
 from voyageai.api_resources import Embedding
+from voyageai.api_resources import voyage_object, voyage_response
 from voyageai.error import APIError, InvalidRequestError, VoyageError
 from voyageai.version import VERSION
+from voyageai.client import Client
 from voyageai.embeddings import get_embedding, get_embeddings, aget_embedding, aget_embeddings
 
 if TYPE_CHECKING:

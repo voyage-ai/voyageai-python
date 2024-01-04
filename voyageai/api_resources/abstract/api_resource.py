@@ -1,8 +1,9 @@
 from urllib.parse import quote_plus
 
 import voyageai
-from voyageai import api_requestor, error, util
-from voyageai.voyage_object import VoyageObject
+from voyageai import error, util
+from voyageai.api_resources import api_requestor
+from voyageai.api_resources.voyage_object import VoyageObject
 from voyageai.util import ApiType
 from typing import Optional
 
