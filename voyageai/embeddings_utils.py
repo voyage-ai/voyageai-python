@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 import voyageai
 
 
-MAX_BATCH_SIZE = 8
-MAX_LIST_LENGTH = 64
-DEFAULT_CONCURRENCE = 4
+MAX_BATCH_SIZE = voyageai.VOYAGE_EMBED_BATCH_SIZE
+MAX_LIST_LENGTH = voyageai.VOYAGE_EMBED_BATCH_SIZE
+DEFAULT_CONCURRENCE = 1
 DEFAULT_RPM = 300
 
 

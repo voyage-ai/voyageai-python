@@ -12,8 +12,6 @@ class AsyncClient(Client):
 
     Args:
         api_key (str): Your API key.
-        max_retries (int): maximal number of retries for requests.
-        timeout (int): request timeout in seconds.
     """
 
     async def embed(

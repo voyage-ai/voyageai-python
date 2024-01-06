@@ -12,19 +12,16 @@ class Client:
 
     Args:
         api_key (str): Your API key.
-        max_retries (int): maximal number of retries for requests.
-        timeout (int): request timeout in seconds.
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        max_retries: int = 3,
-        timeout: int = 120,
     ) -> None:
+        
         self.api_key = api_key or default_api_key()
-        self.max_retries = max_retries
-        self.timeout = timeout
+        # self.max_retries = max_retries
+        # self.timeout = timeout
         # self.batch_size = voyageai.VOYAGE_EMBED_BATCH_SIZE
 
         self._params = {
@@ -54,7 +51,14 @@ class Client:
     @property
     @functools.lru_cache()
     def tokenizer(self):
-        from tokenizers import Tokenizer
+        try:
+            from tokenizers import Tokenizer
+        except ImportError:
+            raise ImportError(
+                "tokenizers package not found. Please run `pip install tokenizers` "
+                "to install the dependency."
+            )
+
         return Tokenizer.from_pretrained('voyageai/voyage')
 
     def tokenize(

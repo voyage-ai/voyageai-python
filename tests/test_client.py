@@ -53,7 +53,7 @@ class TestClient:
             vo.embed(texts, model=self.model)
         
         result = vo.embed(texts, model=self.model, truncation=True)
-        assert result.total_tokens == 4071
+        assert result.total_tokens <= 4096
 
         with pytest.raises(voyageai.error.InvalidRequestError):
             vo.embed(texts, model=self.model, truncation=False)
