@@ -59,7 +59,9 @@ class Client:
                 "to install the dependency."
             )
 
-        return Tokenizer.from_pretrained('voyageai/voyage')
+        tokenizer = Tokenizer.from_pretrained('voyageai/voyage')
+        tokenizer.no_truncation()
+        return tokenizer
 
     def tokenize(
         self,

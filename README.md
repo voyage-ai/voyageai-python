@@ -162,7 +162,7 @@ Output
 ```
 
 
-`count_tokens(texts : List[str])`  [:link:]()
+`count_tokens(texts : List[str])` 
 
 **Parameters**
 
@@ -183,3 +183,4 @@ Output
 ```bash
 86
 ```
+
