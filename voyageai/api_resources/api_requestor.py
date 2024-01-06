@@ -408,51 +408,6 @@ class APIRequestor:
             await ctx.__aexit__(None, None, None)
             return resp, got_stream, self.api_key
 
-    def handle_error_response(self, rbody, rcode, resp, rheaders, stream_error=False):
-        try:
-            error_message = resp["detail"]
-        except (KeyError, TypeError):
-            raise error.APIError(
-                "Invalid response object from API: %r (HTTP response code "
-                "was %d)" % (rbody, rcode),
-                rbody,
-                rcode,
-                resp,
-            )
-
-        util.log_info(
-            "Voyage API error received", error_message=error_message,
-        )
-
-        if rcode == 429:
-            return error.RateLimitError(
-                error_message, rbody, rcode, resp, rheaders
-            )
-        elif rcode == 400:
-            return error.InvalidRequestError(
-                error_message, rbody, rcode, resp, rheaders
-            )
-        elif rcode == 401:
-            return error.AuthenticationError(
-                error_message, rbody, rcode, resp, rheaders
-            )
-        # elif rcode == 403:
-        #     return error.PermissionError(
-        #         error_data.get("message"), rbody, rcode, resp, rheaders
-        #     )
-        # elif rcode == 409:
-        #     return error.TryAgain(
-        #         error_data.get("message"), rbody, rcode, resp, rheaders
-        #     )
-        else:
-            return error.APIError(
-                f"{error_message} {rbody} {rcode} {resp} {rheaders}",
-                rbody,
-                rcode,
-                resp,
-                rheaders,
-            )
-
     def request_headers(
         self, method: str, extra, request_id: Optional[str]
     ) -> Dict[str, str]:
@@ -733,7 +688,14 @@ class APIRequestor:
         if rcode == 204:
             return VoyageResponse(None, rheaders)
 
-        if rcode == 503:
+        if rcode == 500:
+            raise error.ServerError(
+                "The server failed to process the request.",
+                rbody,
+                rcode,
+                headers=rheaders,
+            )
+        elif rcode in [502, 503, 504]:
             raise error.ServiceUnavailableError(
                 "The server is overloaded or not ready yet.",
                 rbody,
@@ -749,15 +711,54 @@ class APIRequestor:
             raise error.APIError(
                 f"HTTP code {rcode} from API ({rbody})", rbody, rcode, headers=rheaders
             ) from e
+
         resp = VoyageResponse(data, rheaders)
-        # In the future, we might add a "status" parameter to errors
-        # to better handle the "error while streaming" case.
-        stream_error = stream and "error" in resp.data
-        if stream_error or not 200 <= rcode < 300:
+        if 400 <= rcode < 500:
             raise self.handle_error_response(
-                rbody, rcode, resp.data, rheaders, stream_error=stream_error
+                rbody, rcode, resp.data, rheaders
             )
         return resp
+    
+    def handle_error_response(self, rbody, rcode, resp, rheaders, stream_error=False):
+        try:
+            error_message = resp["detail"]
+        except (KeyError, TypeError):
+            raise error.APIError(
+                "Invalid response object from API: %r (HTTP response code "
+                "was %d)" % (rbody, rcode),
+                rbody,
+                rcode,
+                resp,
+            )
+
+        util.log_info(
+            "Voyage API error received", error_message=error_message,
+        )
+
+        if rcode == 400:
+            return error.InvalidRequestError(
+                error_message, rbody, rcode, resp, rheaders
+            )
+        elif rcode == 401:
+            return error.AuthenticationError(
+                error_message, rbody, rcode, resp, rheaders
+            )
+        elif rcode == 422:
+            return error.MalformedRequestError(
+                error_message, rbody, rcode, resp, rheaders
+            )
+        elif rcode == 429:
+            return error.RateLimitError(
+                error_message, rbody, rcode, resp, rheaders
+            )
+        else:
+            return error.APIError(
+                f"{error_message} {rbody} {rcode} {resp} {rheaders}",
+                rbody,
+                rcode,
+                resp,
+                rheaders,
+            )
 
 
 class AioHTTPSession(AsyncContextManager):

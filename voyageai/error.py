@@ -137,11 +137,11 @@ class InvalidRequestError(VoyageError):
     #     )
 
 
-class AuthenticationError(VoyageError):
+class MalformedRequestError(VoyageError):
     pass
 
 
-class PermissionError(VoyageError):
+class AuthenticationError(VoyageError):
     pass
 
 
@@ -149,22 +149,9 @@ class RateLimitError(VoyageError):
     pass
 
 
+class ServerError(VoyageError):
+    pass
+
+
 class ServiceUnavailableError(VoyageError):
     pass
-
-
-class InvalidAPIType(VoyageError):
-    pass
-
-
-class SignatureVerificationError(VoyageError):
-    def __init__(self, message, sig_header, http_body=None):
-        super(SignatureVerificationError, self).__init__(message, http_body)
-        self.sig_header = sig_header
-
-    def __reduce__(self):
-        return type(self), (
-            self._message,
-            self.sig_header,
-            self.http_body,
-        )

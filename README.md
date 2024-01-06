@@ -10,34 +10,26 @@ Voyage’s embedding models are **state-of-the-art** in retrieval accuracy. Plea
 
 The Voyage Python library provides convenient access to the Voyage API (see our [documentation](https://docs.voyageai.com)).
 
-## Installation
-Use `pip` to install the package:
+## Authentication with API keys
+
+Voyage AI utilizes API keys to monitor usage and manage permissions. To obtain your key, please sign in with your Voyage AI account and click the "Create new API key" button in the [dashboard](https://dash.voyageai.com).
+
+Your API key is supposed to be secret -- please avoid sharing it or exposing it in browsers or apps. Please store your API key securely for future use. 
+
+
+## Install Voyage Python library
+
+You can interact with the API through HTTP requests from any language. For Python users, we offer an official library which can be installed via `pip` :
 ```bash
-pip install voyageai
+pip install -U voyageai
 ```
+We recommend using the `-U` or `--upgrade` option to ensure you are installing the latest version of the package. This helps you access the most recent features and bug fixes.
 
-Test the installation by running this command:
-
+After installation, you can test it by running:
 ```bash
 python -c "import voyageai"
 ```
-
-## Authentication with API keys
-
-Voyage AI utilizes API keys to monitor usage and manage permissions. To obtain your key, first create an account by clicking the "SIGN IN" button on our [homepage](https://www.voyageai.com). Once signed in, access your API key by clicking "View API key" in the dashboard.
-
-Your API key is supposed to be secret -- please avoid sharing it or exposing it in browsers or apps. Please store your API key securely for future use, e.g., via the following bash command. 
-
-```bash
-export VOYAGE_API_KEY = '[ Your VOYAGE API key ]'
-```
-
-Alternatively, the API key can be set in python (after you install the package):
-
-```python
-import voyageai
-voyageai.api_key = "[ Your VOYAGE API key ]"
-```
+The installation is successful if this command runs without any errors.
 
 ## Voyage Embeddings
 

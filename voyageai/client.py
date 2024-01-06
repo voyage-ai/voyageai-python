@@ -1,8 +1,10 @@
 import json
+import functools
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import voyageai
 from voyageai.util import default_api_key
+from voyageai.embeddings_object import EmbeddingsObject
 
 
 class Client:
@@ -10,21 +12,20 @@ class Client:
 
     Args:
         api_key (str): Your API key.
-        num_workers (int): Maximal number of threads for parallelized calls.
         max_retries (int): maximal number of retries for requests.
         timeout (int): request timeout in seconds.
     """
 
     def __init__(
         self,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         max_retries: int = 3,
         timeout: int = 120,
     ) -> None:
         self.api_key = api_key or default_api_key()
-        # self.batch_size = voyageai.VOYAGE_EMBED_BATCH_SIZE
         self.max_retries = max_retries
         self.timeout = timeout
+        # self.batch_size = voyageai.VOYAGE_EMBED_BATCH_SIZE
 
         self._params = {
             "api_key": self.api_key
@@ -36,24 +37,35 @@ class Client:
         model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL,
         input_type: Optional[str] = None,
         truncation: Optional[bool] = None,
-        truncation_side: Optional[str] = None,
-    ) -> list:
-        result = voyageai.Embedding.create(
+    ) -> EmbeddingsObject:
+        result = EmbeddingsObject()
+        
+        response = voyageai.Embedding.create(
             input=texts,
             model=model,
             input_type=input_type,
             truncation=truncation,
-            truncation_side=truncation_side,
             **self._params,
         )
+        result.update(response)
+
         return result
+
+    @property
+    @functools.lru_cache()
+    def tokenizer(self):
+        from tokenizers import Tokenizer
+        return Tokenizer.from_pretrained('voyageai/voyage')
 
     def tokenize(
         self,
-    ) -> List[str]:
-        pass
+        texts: List[str],
+    ) -> List[Any]:
+        return self.tokenizer.encode_batch(texts)
 
     def count_tokens(
         self,
+        texts: List[str],
     ) -> int:
-        pass
+        tokenized = self.tokenize(texts)
+        return sum([len(t) for t in tokenized])
