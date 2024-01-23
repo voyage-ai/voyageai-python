@@ -21,7 +21,7 @@ DEFAULT_RPM = 300
     )
 def _get_embeddings(
     list_of_text: List[str], 
-    model: str ="voyage-01", 
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL, 
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[List[float]]:
@@ -43,7 +43,7 @@ def _get_embeddings(
     )
 async def _aget_embeddings(
     list_of_text: List[str],
-    model: str ="voyage-01",
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL,
     input_type: Optional[str] = None,
     **kwargs,
 ) -> List[List[float]]:
@@ -71,7 +71,7 @@ def _check_input_type(input_type: str):
 
 def get_embedding(
     text: str, 
-    model: str ="voyage-01", 
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL, 
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[float]:
@@ -88,7 +88,7 @@ def get_embedding(
 
 def get_embeddings(
     list_of_text: List[str], 
-    model: str ="voyage-01", 
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL, 
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[List[float]]:
@@ -122,7 +122,7 @@ def get_embeddings(
 
 
 async def aget_embedding(text: str, 
-    model: str ="voyage-01", 
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL, 
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[float]:
@@ -139,7 +139,7 @@ async def aget_embedding(text: str,
 
 async def aget_embeddings(
     list_of_text: List[str], 
-    model: str ="voyage-01", 
+    model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL, 
     input_type: Optional[str] = None, 
     **kwargs,
 ) -> List[List[float]]:

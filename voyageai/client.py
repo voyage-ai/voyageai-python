@@ -1,6 +1,5 @@
-import json
 import functools
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, List, Optional
 
 import voyageai
 from voyageai.util import default_api_key
@@ -20,9 +19,6 @@ class Client:
     ) -> None:
         
         self.api_key = api_key or default_api_key()
-        # self.max_retries = max_retries
-        # self.timeout = timeout
-        # self.batch_size = voyageai.VOYAGE_EMBED_BATCH_SIZE
 
         self._params = {
             "api_key": self.api_key

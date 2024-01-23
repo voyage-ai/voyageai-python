@@ -1,6 +1,4 @@
-import json
-import functools
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import List, Optional
 
 import voyageai
 from voyageai.client import Client

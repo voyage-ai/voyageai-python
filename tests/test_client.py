@@ -4,7 +4,7 @@ import voyageai
 
 class TestClient:
 
-    model = "voyage-02"
+    model = "voyage-2"
     sample_text = "This is a test query."
     sample_texts = [
         "This is a test query.",
@@ -60,10 +60,10 @@ class TestClient:
 
     def test_client_embed_malformed(self):
         vo = voyageai.Client()
-        with pytest.raises(voyageai.error.MalformedRequestError):
+        with pytest.raises(voyageai.error.InvalidRequestError):
             vo.embed(self.sample_texts, model=self.model, truncation="test")
 
-        with pytest.raises(voyageai.error.MalformedRequestError):
+        with pytest.raises(voyageai.error.InvalidRequestError):
             vo.embed(self.sample_text, input_type="doc")
 
     def test_client_tokenize(self):
