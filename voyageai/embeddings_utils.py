@@ -1,5 +1,6 @@
 import asyncio
 from aiolimiter import AsyncLimiter
+import warnings
 from typing import List, Optional
 from contextlib import nullcontext, AsyncExitStack
 from tenacity import retry, stop_after_attempt, wait_random_exponential, retry_if_exception_type
@@ -83,6 +84,9 @@ def get_embedding(
         input_type (str): Type of the input text. Defalut to None, meaning the type is unspecified.
             Other options include: "query", "document".
     """
+    warnings.warn(
+        "This function will be deprecated. We recommend using the `embed()` function in `voyageai.Client`."
+    )
     return _get_embeddings([text], model, input_type, **kwargs)[0]
 
 
@@ -100,6 +104,9 @@ def get_embeddings(
         input_type (str): Type of the input text. Defalut to None, meaning the type is unspecified.
             Other options include: "query", "document".
     """
+    warnings.warn(
+        "This function will be deprecated. We recommend using the `embed()` function in `voyageai.Client`."
+    )
     if len(list_of_text) <= MAX_BATCH_SIZE:
         return _get_embeddings(list_of_text, model, input_type, **kwargs)
 
@@ -134,6 +141,9 @@ async def aget_embedding(text: str,
         input_type (str): Type of the input text. Defalut to None, meaning the type is unspecified.
             Other options include: "query", "document".
     """
+    warnings.warn(
+        "This function will be deprecated. We recommend using the `embed()` function in `voyageai.AsyncClient`."
+    )
     return (await _aget_embeddings([text], model, input_type, **kwargs))[0]
 
 
@@ -151,6 +161,9 @@ async def aget_embeddings(
         input_type (str): Type of the input text. Defalut to None, meaning the type is unspecified.
             Other options include: "query", "document".
     """
+    warnings.warn(
+        "This function will be deprecated. We recommend using the `embed()` function in `voyageai.AsyncClient`."
+    )
     if len(list_of_text) <= MAX_BATCH_SIZE:
         return (await _aget_embeddings(list_of_text, model, input_type, **kwargs))
 

@@ -4,7 +4,7 @@ import voyageai
 
 class TestEmbedding:
 
-    model = "voyage-01"
+    model = "voyage-2"
     sample_text = "This is a test query."
     sample_texts = [
         "This is a test query.",

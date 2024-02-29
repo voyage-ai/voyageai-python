@@ -1,4 +1,5 @@
 import functools
+import warnings
 from typing import Any, List, Optional
 
 import voyageai
@@ -27,11 +28,19 @@ class Client:
     def embed(
         self,
         texts: List[str],
-        model: str = voyageai.VOYAGE_EMBED_DEFAULT_MODEL,
+        model: Optional[str] = None,
         input_type: Optional[str] = None,
         truncation: Optional[bool] = None,
     ) -> EmbeddingsObject:
-        result = EmbeddingsObject()
+
+        if model is None:
+            model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
+            warnings.warn(
+                f"The `model` argument is not specified and defaults to {voyageai.VOYAGE_EMBED_DEFAULT_MODEL}. "
+                "It will be a required argument in the future. We recommend to specify the model when using this "
+                "function. Please see https://docs.voyageai.com/docs/embeddings for the list of latest models "
+                "provided by Voyage AI."
+            )
         
         response = voyageai.Embedding.create(
             input=texts,
@@ -40,6 +49,8 @@ class Client:
             truncation=truncation,
             **self._params,
         )
+
+        result = EmbeddingsObject()
         result.update(response)
 
         return result
