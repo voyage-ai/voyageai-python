@@ -1,10 +1,7 @@
 import json
 from copy import deepcopy
-from typing import Optional, Tuple, Union
 
 from voyageai import util
-from voyageai.api_resources import api_requestor
-from voyageai.api_resources.voyage_response import VoyageResponse
 
 
 class VoyageObject(dict):
@@ -14,7 +11,6 @@ class VoyageObject(dict):
         **params,
     ):
         super(VoyageObject, self).__init__()
-        self._retrieve_params = params
 
     def __setattr__(self, k, v):
         if k[0] == "_" or k in self.__dict__:
@@ -88,74 +84,6 @@ class VoyageObject(dict):
 
         self._previous = values
 
-    def request(
-        self,
-        method,
-        url,
-        params=None,
-        headers=None,
-        stream=False,
-        request_id: Optional[str] = None,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ):
-        if params is None:
-            params = self._retrieve_params
-        requestor = api_requestor.APIRequestor(
-            key=self.api_key,
-        )
-        response, stream, api_key = requestor.request(
-            method,
-            url,
-            params=params,
-            stream=stream,
-            headers=headers,
-            request_id=request_id,
-            request_timeout=request_timeout,
-        )
-
-        if stream:
-            assert not isinstance(response, VoyageResponse)  # must be an iterator
-            return (
-                util.convert_to_voyage_object(line)
-                for line in response
-            )
-        else:
-            return util.convert_to_voyage_object(response)
-
-    async def arequest(
-        self,
-        method,
-        url,
-        params=None,
-        headers=None,
-        stream=False,
-        request_id: Optional[str] = None,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ):
-        if params is None:
-            params = self._retrieve_params
-        requestor = api_requestor.APIRequestor(
-            key=self.api_key,
-        )
-        response, stream, api_key = await requestor.arequest(
-            method,
-            url,
-            params=params,
-            stream=stream,
-            headers=headers,
-            request_id=request_id,
-            request_timeout=request_timeout,
-        )
-
-        if stream:
-            assert not isinstance(response, VoyageResponse)  # must be an iterator
-            return (
-                util.convert_to_voyage_object(line)
-                for line in response
-            )
-        else:
-            return util.convert_to_voyage_object(response)
-
     def __repr__(self):
         ident_parts = [type(self).__name__]
 
@@ -197,8 +125,6 @@ class VoyageObject(dict):
     # arguments so that we can bypass these possible exceptions on __setitem__.
     def __copy__(self):
         copied = VoyageObject()
-
-        copied._retrieve_params = self._retrieve_params
 
         for k, v in self.items():
             # Call parent's __setitem__ to avoid checks that we've added in the

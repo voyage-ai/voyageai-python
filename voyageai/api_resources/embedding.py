@@ -3,11 +3,12 @@ import time
 import numpy as np
 
 from voyageai import util
-from voyageai.api_resources.abstract.engine_api_resource import EngineAPIResource
+from voyageai.api_resources import APIResource
 from voyageai.error import TryAgain
 
 
-class Embedding(EngineAPIResource):
+class Embedding(APIResource):
+
     OBJECT_NAME = "embeddings"
 
     @classmethod

@@ -18,8 +18,7 @@ class VoyageError(Exception):
                 http_body = http_body.decode("utf-8")
             except BaseException:
                 http_body = (
-                    "<Could not decode body as utf-8. "
-                    "Please contact us through our help center at {{ TODO }}.>"
+                    "<Could not decode body as utf-8.>"
                 )
 
         self._message = message
@@ -30,7 +29,6 @@ class VoyageError(Exception):
         self.code = code
         self.request_id = self.headers.get("request-id", None)
         self.error = self.construct_error_object()
-        self.organization = self.headers.get("voyage-organization", None)
 
     def __str__(self):
         msg = self._message or "<empty message>"

@@ -20,7 +20,7 @@ VOYAGE_EMBED_BATCH_SIZE = 128
 VOYAGE_EMBED_DEFAULT_MODEL = "voyage-2"
 
 from voyageai.api_resources import Embedding
-from voyageai.api_resources import voyage_object, voyage_response
+from voyageai.api_resources import voyage_object
 from voyageai.version import VERSION
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
@@ -30,21 +30,13 @@ if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession
 
-api_key = os.environ.get("VOYAGE_API_KEY")
-# Path of a file with an API key, whose contents can change. Supercedes
-# `api_key` if set.  The main use case is volume-mounted Kubernetes secrets,
-# which are updated automatically.
-api_key_path: Optional[str] = os.environ.get("VOYAGE_API_KEY_PATH")
+api_key: Optional[str] = None
+api_key_path: Optional[str] = None
+api_base: str = "https://api.voyageai.com/v1"
 
-organization = os.environ.get("VOYAGE_ORGANIZATION")
-api_base = os.environ.get("VOYAGE_API_BASE", "https://api.voyageai.com/v1")
-api_type = os.environ.get("VOYAGE_API_TYPE", "voyage")
-api_version = os.environ.get("VOYAGE_API_VERSION", None)
 verify_ssl_certs = True  # No effect. Certificates are always verified.
 proxy = None
 app_info = None
-enable_telemetry = False  # Ignored; the telemetry feature was removed.
-ca_bundle_path = None  # No longer used, feature was removed
 debug = False
 log = None  # Set to either 'debug' or 'info', controls console logging
 

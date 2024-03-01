@@ -1,1 +1,3 @@
-from voyageai.api_resources.embedding import Embedding  # noqa: F401
+from voyageai.api_resources.api_resource import APIResource
+from voyageai.api_resources.embedding import Embedding
+from voyageai.api_resources.api_requestor import VoyageHttpResponse

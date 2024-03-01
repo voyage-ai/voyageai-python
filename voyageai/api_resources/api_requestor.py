@@ -23,15 +23,8 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import aiohttp
 import requests
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
-
 import voyageai
 from voyageai import error, util, version
-from voyageai.api_resources.voyage_response import VoyageResponse
-from voyageai.util import ApiType
 
 TIMEOUT_SECS = 600
 MAX_SESSION_LIFETIME_SECS = 180
@@ -96,34 +89,34 @@ def _make_session() -> requests.Session:
     return s
 
 
-def parse_stream_helper(line: bytes) -> Optional[str]:
-    if line and line.startswith(b"data:"):
-        if line.startswith(b"data: "):
-            # SSE event may be valid when it contain whitespace
-            line = line[len(b"data: "):]
-        else:
-            line = line[len(b"data:"):]
-        if line.strip() == b"[DONE]":
-            # return here will cause GeneratorExit exception in urllib3
-            # and it will close http connection with TCP Reset
+class VoyageHttpResponse:
+    def __init__(self, data, headers):
+        self._headers = headers
+        self.data = data
+
+    @property
+    def request_id(self) -> Optional[str]:
+        return self._headers.get("request-id")
+
+    @property
+    def retry_after(self) -> Optional[int]:
+        try:
+            return int(self._headers.get("retry-after"))
+        except TypeError:
             return None
-        else:
-            return line.decode("utf-8")
-    return None
 
+    @property
+    def operation_location(self) -> Optional[str]:
+        return self._headers.get("operation-location")
 
-def parse_stream(rbody: Iterator[bytes]) -> Iterator[str]:
-    for line in rbody:
-        _line = parse_stream_helper(line)
-        if _line is not None:
-            yield _line
+    @property
+    def organization(self) -> Optional[str]:
+        return self._headers.get("Voyage-Organization")
 
-
-async def parse_stream_async(rbody: aiohttp.StreamReader):
-    async for line in rbody:
-        _line = parse_stream_helper(line)
-        if _line is not None:
-            yield _line
+    @property
+    def response_ms(self) -> Optional[int]:
+        h = self._headers.get("Voyage-Processing-Ms")
+        return None if h is None else round(float(h))
 
 
 class APIRequestor:
@@ -131,149 +124,9 @@ class APIRequestor:
         self,
         key=None,
         api_base=None,
-        api_type=None,
-        api_version=None,
-        organization=None,
     ):
         self.api_base = api_base or voyageai.api_base
         self.api_key = key or util.default_api_key()
-        self.api_type = (
-            ApiType.from_str(api_type)
-            if api_type
-            else ApiType.from_str(voyageai.api_type)
-        )
-        self.api_version = api_version or voyageai.api_version
-        self.organization = organization or voyageai.organization
-
-    @classmethod
-    def format_app_info(cls, info):
-        str = info["name"]
-        if info["version"]:
-            str += "/%s" % (info["version"],)
-        if info["url"]:
-            str += " (%s)" % (info["url"],)
-        return str
-
-    def _check_polling_response(self, response: VoyageResponse, predicate: Callable[[VoyageResponse], bool]):
-        if not predicate(response):
-            return
-        error_data = response.data['error']
-        message = error_data.get('message', 'Operation failed')
-        code = error_data.get('code')
-        raise error.VoyageAIError(message=message, code=code)
-
-    def _poll(
-        self,
-        method,
-        url,
-        until,
-        failed,
-        params = None,
-        headers = None,
-        interval = None,
-        delay = None
-    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
-        if delay:
-            time.sleep(delay)
-
-        response, b, api_key = self.request(method, url, params, headers)
-        self._check_polling_response(response, failed)
-        start_time = time.time()
-        while not until(response):
-            if time.time() - start_time > TIMEOUT_SECS:
-                raise error.Timeout("Operation polling timed out.")
-
-            time.sleep(interval or response.retry_after or 10)
-            response, b, api_key = self.request(method, url, params, headers)
-            self._check_polling_response(response, failed)
-
-        response.data = response.data['result']
-        return response, b, api_key
-
-    async def _apoll(
-        self,
-        method,
-        url,
-        until,
-        failed,
-        params = None,
-        headers = None,
-        interval = None,
-        delay = None
-    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
-        if delay:
-            await asyncio.sleep(delay)
-
-        response, b, api_key = await self.arequest(method, url, params, headers)
-        self._check_polling_response(response, failed)
-        start_time = time.time()
-        while not until(response):
-            if time.time() - start_time > TIMEOUT_SECS:
-                raise error.Timeout("Operation polling timed out.")
-
-            await asyncio.sleep(interval or response.retry_after or 10)
-            response, b, api_key = await self.arequest(method, url, params, headers)
-            self._check_polling_response(response, failed)
-
-        response.data = response.data['result']
-        return response, b, api_key
-
-    @overload
-    def request(
-        self,
-        method,
-        url,
-        params,
-        headers,
-        files,
-        stream: Literal[True],
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
-        pass
-
-    @overload
-    def request(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        *,
-        stream: Literal[True],
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Iterator[VoyageResponse], bool, str]:
-        pass
-
-    @overload
-    def request(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        stream: Literal[False] = ...,
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[VoyageResponse, bool, str]:
-        pass
-
-    @overload
-    def request(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        stream: bool = ...,
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool, str]:
-        pass
 
     def request(
         self,
@@ -285,7 +138,7 @@ class APIRequestor:
         stream: bool = False,
         request_id: Optional[str] = None,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool, str]:
+    ) -> VoyageHttpResponse:
         result = self.request_raw(
             method.lower(),
             url,
@@ -296,65 +149,8 @@ class APIRequestor:
             request_id=request_id,
             request_timeout=request_timeout,
         )
-        resp, got_stream = self._interpret_response(result, stream)
-        return resp, got_stream, self.api_key
-
-    @overload
-    async def arequest(
-        self,
-        method,
-        url,
-        params,
-        headers,
-        files,
-        stream: Literal[True],
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[AsyncGenerator[VoyageResponse, None], bool, str]:
-        pass
-
-    @overload
-    async def arequest(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        *,
-        stream: Literal[True],
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[AsyncGenerator[VoyageResponse, None], bool, str]:
-        pass
-
-    @overload
-    async def arequest(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        stream: Literal[False] = ...,
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[VoyageResponse, bool, str]:
-        pass
-
-    @overload
-    async def arequest(
-        self,
-        method,
-        url,
-        params=...,
-        headers=...,
-        files=...,
-        stream: bool = ...,
-        request_id: Optional[str] = ...,
-        request_timeout: Optional[Union[float, Tuple[float, float]]] = ...,
-    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool, str]:
-        pass
+        resp = self._interpret_response(result)
+        return resp
 
     async def arequest(
         self,
@@ -366,7 +162,7 @@ class APIRequestor:
         stream: bool = False,
         request_id: Optional[str] = None,
         request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool, str]:
+    ) -> VoyageHttpResponse:
         ctx = AioHTTPSession()
         session = await ctx.__aenter__()
         result = None
@@ -381,32 +177,18 @@ class APIRequestor:
                 request_id=request_id,
                 request_timeout=request_timeout,
             )
-            resp, got_stream = await self._interpret_async_response(result, stream)
+            resp = await self._interpret_async_response(result)
         except Exception:
             # Close the request before exiting session context.
             if result is not None:
                 result.release()
             await ctx.__aexit__(None, None, None)
             raise
-        if got_stream:
-
-            async def wrap_resp():
-                assert isinstance(resp, AsyncGenerator)
-                try:
-                    async for r in resp:
-                        yield r
-                finally:
-                    # Close the request before exiting session context. Important to do it here
-                    # as if stream is not fully exhausted, we need to close the request nevertheless.
-                    result.release()
-                    await ctx.__aexit__(None, None, None)
-
-            return wrap_resp(), got_stream, self.api_key
-        else:
-            # Close the request before exiting session context.
-            result.release()
-            await ctx.__aexit__(None, None, None)
-            return resp, got_stream, self.api_key
+        
+        # Close the request before exiting session context.
+        result.release()
+        await ctx.__aexit__(None, None, None)
+        return resp
 
     def request_headers(
         self, method: str, extra, request_id: Optional[str]
@@ -435,13 +217,8 @@ class APIRequestor:
             "User-Agent": user_agent,
         }
 
-        headers.update(util.api_key_to_header(self.api_type, self.api_key))
+        headers.update(util.api_key_to_header(self.api_key))
 
-        if self.organization:
-            headers["Voyage-Organization"] = self.organization
-
-        if self.api_version is not None and self.api_type == ApiType.VOYAGEAI:
-            headers["Voyage-Version"] = self.api_version
         if request_id is not None:
             headers["X-Request-Id"] = request_id
         if voyageai.debug:
@@ -502,14 +279,13 @@ class APIRequestor:
         else:
             raise error.APIConnectionError(
                 "Unrecognized HTTP method %r. This may indicate a bug in the "
-                "VoyageAI bindings. Please contact us through our help center at {{TODO}} for "
-                "assistance." % (method,)
+                "VoyageAI bindings." % (method,)
             )
 
         headers = self.request_headers(method, headers, request_id)
 
         util.log_debug("Request to Voyage API", method=method, path=abs_url)
-        util.log_debug("Post details", data=data, api_version=self.api_version)
+        util.log_debug("Post details", data=data)
 
         return abs_url, headers, data
 
@@ -631,62 +407,33 @@ class APIRequestor:
         except aiohttp.ClientError as e:
             raise error.APIConnectionError("Error communicating with Voyage") from e
 
-    def _interpret_response(
-        self, result: requests.Response, stream: bool
-    ) -> Tuple[Union[VoyageResponse, Iterator[VoyageResponse]], bool]:
+    def _interpret_response(self, result: requests.Response) -> VoyageHttpResponse:
         """Returns the response(s) and a bool indicating whether it is a stream."""
-        if stream and "text/event-stream" in result.headers.get("Content-Type", ""):
-            return (
-                self._interpret_response_line(
-                    line, result.status_code, result.headers, stream=True
-                )
-                for line in parse_stream(result.iter_lines())
-            ), True
-        else:
-            return (
-                self._interpret_response_line(
-                    result.content.decode("utf-8"),
-                    result.status_code,
-                    result.headers,
-                    stream=False,
-                ),
-                False,
-            )
+        
+        return self._interpret_response_line(
+            result.content.decode("utf-8"),
+            result.status_code,
+            result.headers,
+        )
 
-    async def _interpret_async_response(
-        self, result: aiohttp.ClientResponse, stream: bool
-    ) -> Tuple[Union[VoyageResponse, AsyncGenerator[VoyageResponse, None]], bool]:
+    async def _interpret_async_response(self, result: aiohttp.ClientResponse) -> VoyageHttpResponse:
         """Returns the response(s) and a bool indicating whether it is a stream."""
-        if stream and "text/event-stream" in result.headers.get("Content-Type", ""):
-            return (
-                self._interpret_response_line(
-                    line, result.status, result.headers, stream=True
-                )
-                async for line in parse_stream_async(result.content)
-            ), True
-        else:
-            try:
-                await result.read()
-            except (aiohttp.ServerTimeoutError, asyncio.TimeoutError) as e:
-                raise error.Timeout("Request timed out") from e
-            except aiohttp.ClientError as e:
-                util.log_warn(e, body=result.content)
-            return (
-                self._interpret_response_line(
-                    (await result.read()).decode("utf-8"),
-                    result.status,
-                    result.headers,
-                    stream=False,
-                ),
-                False,
-            )
+        try:
+            await result.read()
+        except (aiohttp.ServerTimeoutError, asyncio.TimeoutError) as e:
+            raise error.Timeout("Request timed out") from e
+        except aiohttp.ClientError as e:
+            util.log_warn(e, body=result.content)
+        return self._interpret_response_line(
+            (await result.read()).decode("utf-8"),
+            result.status,
+            result.headers,
+        )
 
-    def _interpret_response_line(
-        self, rbody: str, rcode: int, rheaders, stream: bool
-    ) -> VoyageResponse:
+    def _interpret_response_line(self, rbody: str, rcode: int, rheaders) -> VoyageHttpResponse:
         # HTTP 204 response code does not have any content in the body.
         if rcode == 204:
-            return VoyageResponse(None, rheaders)
+            return VoyageHttpResponse(None, rheaders)
 
         if rcode == 500:
             raise error.ServerError(
@@ -712,14 +459,14 @@ class APIRequestor:
                 f"HTTP code {rcode} from API ({rbody})", rbody, rcode, headers=rheaders
             ) from e
 
-        resp = VoyageResponse(data, rheaders)
+        resp = VoyageHttpResponse(data, rheaders)
         if 400 <= rcode < 500:
             raise self.handle_error_response(
                 rbody, rcode, resp.data, rheaders
             )
         return resp
     
-    def handle_error_response(self, rbody, rcode, resp, rheaders, stream_error=False):
+    def handle_error_response(self, rbody, rcode, resp, rheaders):
         try:
             error_message = resp["detail"]
         except (KeyError, TypeError):

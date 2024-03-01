@@ -2,9 +2,6 @@ import logging
 import os
 import re
 import sys
-from enum import Enum
-from typing import Optional
-
 import voyageai
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
@@ -19,21 +16,8 @@ __all__ = [
 ]
 
 api_key_to_header = (
-    lambda api, key: {"Authorization": f"Bearer {key}"}
+    lambda key: {"Authorization": f"Bearer {key}"}
 )
-
-
-class ApiType(Enum):
-    VOYAGE = 1
-
-    @staticmethod
-    def from_str(label):
-        if label.lower() == "voyage":
-            return ApiType.VOYAGE
-        else:
-            raise voyageai.error.InvalidAPIType(
-                "The API type provided in invalid. Please select one of the supported API types: 'voyage'"
-            )
 
 
 def _console_log_level():
@@ -84,9 +68,9 @@ def logfmt(props):
 
 
 def convert_to_voyage_object(resp):
-    # If we get a VoyageResponse, we'll want to return a VoyageObject.
+    # If we get a VoyageHttpResponse, we'll want to return a VoyageObject.
 
-    if isinstance(resp, voyageai.voyage_response.VoyageResponse):
+    if isinstance(resp, voyageai.api_resources.VoyageHttpResponse):
         resp = resp.data
 
     if isinstance(resp, list):
@@ -132,16 +116,21 @@ def merge_dicts(x, y):
 
 
 def default_api_key() -> str:
-    if voyageai.api_key_path:
-        with open(voyageai.api_key_path, "rt") as k:
+    api_key_path = voyageai.api_key_path or os.environ.get("VOYAGE_API_KEY_PATH")
+    api_key = voyageai.api_key or os.environ.get("VOYAGE_API_KEY")
+    
+    # When api_key_path is specified, it overwrites api_key
+    if api_key_path:
+        with open(api_key_path, "rt") as k:
             api_key = k.read().strip()
             return api_key
-    elif voyageai.api_key is not None:
-        return voyageai.api_key
+    elif api_key is not None:
+        return api_key
     else:
         raise voyageai.error.AuthenticationError(
             "No API key provided. You can set your API key in code using 'voyageai.api_key = <API-KEY>', "
-            "or you can set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
-            "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>'. "
-            "You can generate API keys in Voyage AI's dashboard (https://dash.voyageai.com)."
+            "or set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
+            "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>', "
+            "or set the environment variable VOYAGE_API_KEY_PATH=<PATH>. "
+            "API keys can be generated in Voyage AI's dashboard (https://dash.voyageai.com)."
         )
