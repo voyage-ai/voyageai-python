@@ -2,7 +2,7 @@ from typing import List, Optional
 
 import voyageai
 from voyageai.client import Client
-from voyageai.embeddings_object import EmbeddingsObject
+from voyageai.object import EmbeddingsObject, RerankingObject
 
 
 class AsyncClient(Client):
@@ -19,7 +19,6 @@ class AsyncClient(Client):
         input_type: Optional[str] = None,
         truncation: Optional[bool] = None,
     ) -> EmbeddingsObject:
-        result = EmbeddingsObject()
         
         response = await voyageai.Embedding.acreate(
             input=texts,
@@ -28,6 +27,27 @@ class AsyncClient(Client):
             truncation=truncation,
             **self._params,
         )
-        result.update(response)
 
+        result = EmbeddingsObject(response)
+        return result
+
+    async def rerank(
+        self,
+        query: str,
+        documents: List[str],
+        model: str,
+        top_k: Optional[int] = None,
+        truncation: bool = True,
+    ) -> RerankingObject:
+
+        response = await voyageai.Reranking.acreate(
+            query=query,
+            documents=documents,
+            model=model,
+            top_k=top_k,
+            truncation=truncation,
+            **self._params,
+        )
+
+        result = RerankingObject(documents, response)
         return result

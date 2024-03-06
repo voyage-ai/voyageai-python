@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 
 import voyageai
 from voyageai.util import default_api_key
-from voyageai.embeddings_object import EmbeddingsObject
+from voyageai.object import EmbeddingsObject, RerankingObject
 
 
 class Client:
@@ -50,9 +50,28 @@ class Client:
             **self._params,
         )
 
-        result = EmbeddingsObject()
-        result.update(response)
+        result = EmbeddingsObject(response)
+        return result
+    
+    def rerank(
+        self,
+        query: str,
+        documents: List[str],
+        model: str,
+        top_k: Optional[int] = None,
+        truncation: bool = True,
+    ) -> RerankingObject:
 
+        response = voyageai.Reranking.create(
+            query=query,
+            documents=documents,
+            model=model,
+            top_k=top_k,
+            truncation=truncation,
+            **self._params,
+        )
+
+        result = RerankingObject(documents, response)
         return result
 
     @property

@@ -4,22 +4,27 @@ import voyageai
 
 class TestClient:
 
-    model = "voyage-2"
-    sample_text = "This is a test query."
-    sample_texts = [
-        "This is a test query.",
-        "This is a test query 1.",
-        "This is a test query 2."
+    embed_model = "voyage-2"
+    rerank_model = "rerank-lite-1"
+
+    sample_query = "This is a test query."
+    sample_docs = [
+        "This is a test document.",
+        "This is a test document 1.",
+        "This is a test document 2."
     ]
 
+    '''
+    Embedding
+    '''
     def test_client_embed(self):
         vo = voyageai.Client()
-        result = vo.embed([self.sample_text], model=self.model)
+        result = vo.embed([self.sample_query], model=self.embed_model)
         assert len(result.embeddings) == 1
         assert len(result.embeddings[0]) == 1024
         assert result.total_tokens > 0
 
-        result = vo.embed(self.sample_texts, model=self.model)
+        result = vo.embed(self.sample_docs, model=self.embed_model)
         assert len(result.embeddings) == 3
         for i in range(3):
             assert len(result.embeddings[i]) == 1024
@@ -28,9 +33,11 @@ class TestClient:
     def test_client_embed_input_type(self):
         vo = voyageai.Client()
         query_embd = vo.embed(
-            [self.sample_text], model=self.model, input_type="query").embeddings[0]
+            [self.sample_query], model=self.embed_model, input_type="query"
+        ).embeddings[0]
         doc_embd = vo.embed(
-            [self.sample_text], model=self.model, input_type="document").embeddings[0]
+            self.sample_docs, model=self.embed_model, input_type="document"
+        ).embeddings[0]
         assert len(query_embd) == 1024
         assert len(doc_embd) == 1024
         assert query_embd[0] != doc_embd[0]
@@ -38,37 +45,88 @@ class TestClient:
     def test_client_embed_batch_size(self):
         vo = voyageai.Client()
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed([self.sample_text] * 200, model=self.model)
-
-    def test_client_embed_model_name(self):
-        vo = voyageai.Client()
-        with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(self.sample_text, model="wrong-model-name")
+            vo.embed(self.sample_docs * 200, model=self.embed_model)
 
     def test_client_embed_context_length(self):
         vo = voyageai.Client()
-        texts = self.sample_texts + [self.sample_text * 1000]
+        texts = self.sample_docs + [self.sample_query * 1000]
         
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(texts, model=self.model)
+            vo.embed(texts, model=self.embed_model)
         
-        result = vo.embed(texts, model=self.model, truncation=True)
+        result = vo.embed(texts, model=self.embed_model, truncation=True)
         assert result.total_tokens <= 4096
 
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(texts, model=self.model, truncation=False)
+            vo.embed(texts, model=self.embed_model, truncation=False)
 
-    def test_client_embed_malformed(self):
+    def test_client_embed_invalid_request(self):
         vo = voyageai.Client()
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(self.sample_texts, model=self.model, truncation="test")
+            vo.embed(self.sample_query, model="wrong-model-name")
 
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(self.sample_text, input_type="doc")
+            vo.embed(self.sample_docs, model=self.embed_model, truncation="test")
 
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            vo.embed(self.sample_query, model=self.embed_model, input_type="doc")
+
+    '''
+    Reranker
+    '''
+    def test_client_rerank(self):
+        vo = voyageai.Client()
+        reranking = vo.rerank(self.sample_query, self.sample_docs, self.rerank_model)
+        assert len(reranking.results) == len(self.sample_docs)
+        
+        for i in range(len(self.sample_docs)):
+            if i + 1 < len(self.sample_docs):
+                r = reranking.results[i]
+                assert r.relevance_score >= reranking.results[i + 1].relevance_score
+                assert r.document == self.sample_docs[r.index]
+        
+        assert reranking.total_tokens > 0
+
+    def test_client_rerank_top_k(self):
+        vo = voyageai.Client()
+        reranking = vo.rerank(self.sample_query, self.sample_docs, self.rerank_model, top_k=2)
+        assert len(reranking.results) == 2
+
+    def test_client_rerank_truncation(self):
+        long_query = self.sample_query * 1000
+        long_docs = [d * 1000 for d in self.sample_docs]
+        # print(long_query)
+        # print(long_docs)
+
+        vo = voyageai.Client()
+        reranking = vo.rerank(long_query, long_docs, self.rerank_model)
+        assert reranking.total_tokens <= 4096 * len(long_docs)
+
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            reranking = vo.rerank(long_query, self.sample_docs, self.rerank_model, truncation=False)
+
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            reranking = vo.rerank(self.sample_query, long_docs, self.rerank_model, truncation=False)
+    
+    def test_client_rerank_invalid_request(self):
+        vo = voyageai.Client()
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
+        
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")
+
+        # This does not exceeds single document context length limit, but exceeds the total tokens limit.
+        long_docs = [self.sample_docs[0] * 100] * 1000
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            vo.rerank(self.sample_query, long_docs, self.rerank_model)
+
+    '''
+    Tokenizer
+    '''
     def test_client_tokenize(self):
         vo = voyageai.Client()
-        result = vo.tokenize(self.sample_texts)
+        result = vo.tokenize(self.sample_docs)
         assert isinstance(result, list)
         assert len(result) == 3
         assert len(result[0].tokens) == 7
@@ -77,8 +135,8 @@ class TestClient:
 
     def test_client_count_tokens(self):
         vo = voyageai.Client()
-        total_tokens = vo.count_tokens([self.sample_text])
+        total_tokens = vo.count_tokens([self.sample_query])
         assert total_tokens == 7
 
-        total_tokens = vo.count_tokens(self.sample_texts)
+        total_tokens = vo.count_tokens(self.sample_docs)
         assert total_tokens == 25

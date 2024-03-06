@@ -1,12 +1,8 @@
-from urllib.parse import quote_plus
-
-import voyageai
-from voyageai import error, util
 from voyageai.api_resources import api_requestor
-from voyageai.api_resources.voyage_object import VoyageObject
+from voyageai.api_resources.response import VoyageResponse, convert_to_voyage_response
 
 
-class APIResource(VoyageObject):
+class APIResource(VoyageResponse):
 
     @classmethod
     def class_url(cls):
@@ -57,7 +53,7 @@ class APIResource(VoyageObject):
             request_timeout=request_timeout,
         )
 
-        obj = util.convert_to_voyage_object(response)
+        obj = convert_to_voyage_response(response)
         return obj
 
     @classmethod
@@ -79,5 +75,5 @@ class APIResource(VoyageObject):
             request_timeout=request_timeout,
         )
 
-        obj = util.convert_to_voyage_object(response)
+        obj = convert_to_voyage_response(response)
         return obj

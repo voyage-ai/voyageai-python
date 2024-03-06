@@ -67,54 +67,6 @@ def logfmt(props):
     return " ".join([fmt(key, val) for key, val in sorted(props.items())])
 
 
-def convert_to_voyage_object(resp):
-    # If we get a VoyageHttpResponse, we'll want to return a VoyageObject.
-
-    if isinstance(resp, voyageai.api_resources.VoyageHttpResponse):
-        resp = resp.data
-
-    if isinstance(resp, list):
-        return [
-            convert_to_voyage_object(i)
-            for i in resp
-        ]
-    elif isinstance(resp, dict) and not isinstance(
-        resp, voyageai.voyage_object.VoyageObject
-    ):
-        resp = resp.copy()
-        klass = voyageai.voyage_object.VoyageObject
-
-        return klass.construct_from(resp)
-    else:
-        return resp
-
-
-def convert_to_dict(obj):
-    """Converts a VoyageObject back to a regular dict.
-
-    Nested VoyageObjects are also converted back to regular dicts.
-
-    :param obj: The VoyageObject to convert.
-
-    :returns: The VoyageObject as a dict.
-    """
-    if isinstance(obj, list):
-        return [convert_to_dict(i) for i in obj]
-    # This works by virtue of the fact that VoyageObjects _are_ dicts. The dict
-    # comprehension returns a regular dict and recursively applies the
-    # conversion to each value.
-    elif isinstance(obj, dict):
-        return {k: convert_to_dict(v) for k, v in obj.items()}
-    else:
-        return obj
-
-
-def merge_dicts(x, y):
-    z = x.copy()
-    z.update(y)
-    return z
-
-
 def default_api_key() -> str:
     api_key_path = voyageai.api_key_path or os.environ.get("VOYAGE_API_KEY_PATH")
     api_key = voyageai.api_key or os.environ.get("VOYAGE_API_KEY")

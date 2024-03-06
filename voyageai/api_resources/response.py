@@ -2,19 +2,20 @@ import json
 from copy import deepcopy
 
 from voyageai import util
+from voyageai.api_resources.api_requestor import VoyageHttpResponse
 
 
-class VoyageObject(dict):
+class VoyageResponse(dict):
 
     def __init__(
         self,
         **params,
     ):
-        super(VoyageObject, self).__init__()
+        super(VoyageResponse, self).__init__()
 
     def __setattr__(self, k, v):
         if k[0] == "_" or k in self.__dict__:
-            return super(VoyageObject, self).__setattr__(k, v)
+            return super(VoyageResponse, self).__setattr__(k, v)
 
         self[k] = v
         return None
@@ -29,7 +30,7 @@ class VoyageObject(dict):
 
     def __delattr__(self, k):
         if k[0] == "_" or k in self.__dict__:
-            return super(VoyageObject, self).__delattr__(k)
+            return super(VoyageResponse, self).__delattr__(k)
         else:
             del self[k]
 
@@ -40,7 +41,7 @@ class VoyageObject(dict):
                 "We interpret empty strings as None in requests."
                 "You may set %s.%s = None to delete the property" % (k, str(self), k)
             )
-        super(VoyageObject, self).__setitem__(k, v)
+        super(VoyageResponse, self).__setitem__(k, v)
 
     def __delitem__(self, k):
         raise NotImplementedError("del is not supported")
@@ -78,8 +79,8 @@ class VoyageObject(dict):
         # Wipe old state before setting new.
         self.clear()
         for k, v in values.items():
-            super(VoyageObject, self).__setitem__(
-                k, util.convert_to_voyage_object(v)
+            super(VoyageResponse, self).__setitem__(
+                k, convert_to_voyage_response(v)
             )
 
         self._previous = values
@@ -109,11 +110,11 @@ class VoyageObject(dict):
     def to_dict_recursive(self):
         d = dict(self)
         for k, v in d.items():
-            if isinstance(v, VoyageObject):
+            if isinstance(v, VoyageResponse):
                 d[k] = v.to_dict_recursive()
             elif isinstance(v, list):
                 d[k] = [
-                    e.to_dict_recursive() if isinstance(e, VoyageObject) else e
+                    e.to_dict_recursive() if isinstance(e, VoyageResponse) else e
                     for e in v
                 ]
         return d
@@ -124,12 +125,12 @@ class VoyageObject(dict):
     # if it was set to be set manually. Here we override the class' copy
     # arguments so that we can bypass these possible exceptions on __setitem__.
     def __copy__(self):
-        copied = VoyageObject()
+        copied = VoyageResponse()
 
         for k, v in self.items():
             # Call parent's __setitem__ to avoid checks that we've added in the
             # overridden version that can throw exceptions.
-            super(VoyageObject, copied).__setitem__(k, v)
+            super(VoyageResponse, copied).__setitem__(k, v)
 
         return copied
 
@@ -145,6 +146,41 @@ class VoyageObject(dict):
         for k, v in self.items():
             # Call parent's __setitem__ to avoid checks that we've added in the
             # overridden version that can throw exceptions.
-            super(VoyageObject, copied).__setitem__(k, deepcopy(v, memo))
+            super(VoyageResponse, copied).__setitem__(k, deepcopy(v, memo))
 
         return copied
+
+
+def convert_to_voyage_response(resp):
+    # If we get a VoyageHttpResponse, we'll want to return a VoyageResponse.
+
+    if isinstance(resp, VoyageHttpResponse):
+        resp = resp.data
+
+    if isinstance(resp, list):
+        return [
+            convert_to_voyage_response(i)
+            for i in resp
+        ]
+    elif isinstance(resp, dict) and not isinstance(resp, VoyageResponse):
+        resp = resp.copy()
+        return VoyageResponse.construct_from(resp)
+    else:
+        return resp
+
+
+def convert_to_dict(obj):
+    """Converts a VoyageResponse back to a regular dict.
+
+    Nested VoyageResponse are also converted back to regular dicts.
+
+    :param obj: The VoyageResponse to convert.
+
+    :returns: The VoyageResponse as a dict.
+    """
+    if isinstance(obj, list):
+        return [convert_to_dict(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_to_dict(v) for k, v in obj.items()}
+    else:
+        return obj
