@@ -1,5 +1,6 @@
 import pytest
 import voyageai
+import voyageai.error as error
 
 
 class TestAsyncClient:
@@ -47,14 +48,20 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_async_client_embed_invalid_request(self):
         vo = voyageai.AsyncClient()
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.embed(self.sample_query, model="wrong-model-name")
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.embed(self.sample_docs, model=self.embed_model, truncation="test")
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.embed(self.sample_query, model=self.embed_model, input_type="doc")
+
+    @pytest.mark.asyncio
+    async def test_client_embed_timeout(self):
+        vo = voyageai.AsyncClient(timeout=1, max_retries=1)
+        with pytest.raises(error.Timeout):
+            await vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
 
     """
     Reranker
@@ -76,15 +83,15 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_client_rerank_invalid_request(self):
         vo = voyageai.AsyncClient()
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
         
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")
 
         # This does not exceeds single document context length limit, but exceeds the total tokens limit.
         long_docs = [self.sample_docs[0] * 100] * 1000
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, long_docs, self.rerank_model)
 
     """

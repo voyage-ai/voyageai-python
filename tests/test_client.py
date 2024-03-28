@@ -1,5 +1,6 @@
 import pytest
 import voyageai
+import voyageai.error as error
 
 
 class TestClient:
@@ -51,25 +52,27 @@ class TestClient:
         vo = voyageai.Client()
         texts = self.sample_docs + [self.sample_query * 1000]
         
-        with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(texts, model=self.embed_model)
-        
         result = vo.embed(texts, model=self.embed_model, truncation=True)
         assert result.total_tokens <= 4096
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.embed(texts, model=self.embed_model, truncation=False)
 
     def test_client_embed_invalid_request(self):
         vo = voyageai.Client()
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.embed(self.sample_query, model="wrong-model-name")
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.embed(self.sample_docs, model=self.embed_model, truncation="test")
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.embed(self.sample_query, model=self.embed_model, input_type="doc")
+
+    def test_client_embed_timeout(self):
+        vo = voyageai.Client(timeout=1, max_retries=1)
+        with pytest.raises(error.Timeout):
+            vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
 
     '''
     Reranker
@@ -102,23 +105,23 @@ class TestClient:
         reranking = vo.rerank(long_query, long_docs, self.rerank_model)
         assert reranking.total_tokens <= 4096 * len(long_docs)
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             reranking = vo.rerank(long_query, self.sample_docs, self.rerank_model, truncation=False)
 
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             reranking = vo.rerank(self.sample_query, long_docs, self.rerank_model, truncation=False)
     
     def test_client_rerank_invalid_request(self):
         vo = voyageai.Client()
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
         
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")
 
         # This does not exceeds single document context length limit, but exceeds the total tokens limit.
         long_docs = [self.sample_docs[0] * 100] * 1000
-        with pytest.raises(voyageai.error.InvalidRequestError):
+        with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, long_docs, self.rerank_model)
 
     '''

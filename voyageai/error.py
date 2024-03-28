@@ -80,59 +80,11 @@ class Timeout(VoyageError):
 
 
 class APIConnectionError(VoyageError):
-    def __init__(
-        self,
-        message,
-        http_body=None,
-        http_status=None,
-        json_body=None,
-        headers=None,
-        code=None,
-        should_retry=False,
-    ):
-        super(APIConnectionError, self).__init__(
-            message, http_body, http_status, json_body, headers, code
-        )
-        self.should_retry = should_retry
+    pass
 
 
 class InvalidRequestError(VoyageError):
     pass
-    # def __init__(
-    #     self,
-    #     message,
-    #     param,
-    #     code=None,
-    #     http_body=None,
-    #     http_status=None,
-    #     json_body=None,
-    #     headers=None,
-    # ):
-    #     super(InvalidRequestError, self).__init__(
-    #         message, http_body, http_status, json_body, headers, code
-    #     )
-    #     self.param = param
-
-    # def __repr__(self):
-    #     return "%s(message=%r, param=%r, code=%r, http_status=%r, " "request_id=%r)" % (
-    #         self.__class__.__name__,
-    #         self._message,
-    #         self.param,
-    #         self.code,
-    #         self.http_status,
-    #         self.request_id,
-    #     )
-
-    # def __reduce__(self):
-    #     return type(self), (
-    #         self._message,
-    #         self.param,
-    #         self.code,
-    #         self.http_body,
-    #         self.http_status,
-    #         self.json_body,
-    #         self.headers,
-    #     )
 
 
 class MalformedRequestError(VoyageError):
@@ -149,7 +101,6 @@ class RateLimitError(VoyageError):
 
 class ServerError(VoyageError):
     pass
-
 
 class ServiceUnavailableError(VoyageError):
     pass

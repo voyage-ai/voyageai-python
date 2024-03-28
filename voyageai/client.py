@@ -1,8 +1,10 @@
 import functools
 import warnings
 from typing import Any, List, Optional
+from tenacity import Retrying, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 import voyageai
+import voyageai.error as error
 from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
 
@@ -12,25 +14,41 @@ class Client:
 
     Args:
         api_key (str): Your API key.
+        max_retries (int): Maximum number of retries if API call fails.
+        timeout (float): Timeout in seconds.
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
+        max_retries: int = 3,
+        timeout: Optional[float] = None,
     ) -> None:
         
         self.api_key = api_key or default_api_key()
 
         self._params = {
-            "api_key": self.api_key
+            "api_key": self.api_key,
+            "request_timeout": timeout,
         }
+
+        self.retry_controller = Retrying(
+            reraise=True,
+            stop=stop_after_attempt(max_retries),
+            wait=wait_exponential(min=1, max=16),
+            retry=(
+                retry_if_exception_type(error.RateLimitError)
+                | retry_if_exception_type(error.APIError)
+                | retry_if_exception_type(error.Timeout)
+            )
+        )
 
     def embed(
         self,
         texts: List[str],
         model: Optional[str] = None,
         input_type: Optional[str] = None,
-        truncation: Optional[bool] = None,
+        truncation: bool = True,
     ) -> EmbeddingsObject:
 
         if model is None:
@@ -42,13 +60,15 @@ class Client:
                 "provided by Voyage AI."
             )
         
-        response = voyageai.Embedding.create(
-            input=texts,
-            model=model,
-            input_type=input_type,
-            truncation=truncation,
-            **self._params,
-        )
+        for attempt in self.retry_controller:
+            with attempt:
+                response = voyageai.Embedding.create(
+                    input=texts,
+                    model=model,
+                    input_type=input_type,
+                    truncation=truncation,
+                    **self._params,
+                )
 
         result = EmbeddingsObject(response)
         return result
@@ -62,14 +82,16 @@ class Client:
         truncation: bool = True,
     ) -> RerankingObject:
 
-        response = voyageai.Reranking.create(
-            query=query,
-            documents=documents,
-            model=model,
-            top_k=top_k,
-            truncation=truncation,
-            **self._params,
-        )
+        for attempt in self.retry_controller:
+            with attempt:
+                response = voyageai.Reranking.create(
+                    query=query,
+                    documents=documents,
+                    model=model,
+                    top_k=top_k,
+                    truncation=truncation,
+                    **self._params,
+                )
 
         result = RerankingObject(documents, response)
         return result
