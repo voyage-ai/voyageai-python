@@ -58,7 +58,7 @@ class TestAsyncClient:
             await vo.embed(self.sample_query, model=self.embed_model, input_type="doc")
 
     @pytest.mark.asyncio
-    async def test_client_embed_timeout(self):
+    async def test_async_client_embed_timeout(self):
         vo = voyageai.AsyncClient(timeout=1, max_retries=1)
         with pytest.raises(error.Timeout):
             await vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
@@ -81,7 +81,7 @@ class TestAsyncClient:
         assert reranking.total_tokens > 0
 
     @pytest.mark.asyncio
-    async def test_client_rerank_invalid_request(self):
+    async def test_async_client_rerank_invalid_request(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
@@ -106,7 +106,7 @@ class TestAsyncClient:
         assert len(result[1].tokens) == 9
         assert len(result[2].tokens) == 9
 
-    def test_client_count_tokens(self):
+    def test_async_client_count_tokens(self):
         vo = voyageai.Client()
         total_tokens = vo.count_tokens([self.sample_query])
         assert total_tokens == 7

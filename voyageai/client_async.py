@@ -1,6 +1,6 @@
 import warnings
 from typing import List, Optional
-from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
 
 import voyageai
 import voyageai.error as error
@@ -21,7 +21,7 @@ class AsyncClient(Client):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        max_retries: int = 3,
+        max_retries: int = 0,
         timeout: Optional[float] = None,
     ) -> None:
         
@@ -35,10 +35,10 @@ class AsyncClient(Client):
         self.retry_controller = AsyncRetrying(
             reraise=True,
             stop=stop_after_attempt(max_retries),
-            wait=wait_exponential(min=1, max=16),
+            wait=wait_exponential_jitter(initial=1, max=16),
             retry=(
                 retry_if_exception_type(error.RateLimitError)
-                | retry_if_exception_type(error.APIError)
+                | retry_if_exception_type(error.ServiceUnavailableError)
                 | retry_if_exception_type(error.Timeout)
             )
         )
