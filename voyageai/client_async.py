@@ -1,6 +1,11 @@
 import warnings
 from typing import List, Optional
-from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
+from tenacity import (
+    AsyncRetrying,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+)
 
 import voyageai
 import voyageai.error as error
@@ -24,7 +29,7 @@ class AsyncClient(Client):
         max_retries: int = 0,
         timeout: Optional[float] = None,
     ) -> None:
-        
+
         self.api_key = api_key or default_api_key()
 
         self._params = {
@@ -40,7 +45,7 @@ class AsyncClient(Client):
                 retry_if_exception_type(error.RateLimitError)
                 | retry_if_exception_type(error.ServiceUnavailableError)
                 | retry_if_exception_type(error.Timeout)
-            )
+            ),
         )
 
     async def embed(
@@ -50,7 +55,7 @@ class AsyncClient(Client):
         input_type: Optional[str] = None,
         truncation: bool = True,
     ) -> EmbeddingsObject:
-        
+
         if model is None:
             model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
             warnings.warn(
@@ -59,7 +64,7 @@ class AsyncClient(Client):
                 "function. Please see https://docs.voyageai.com/docs/embeddings for the list of latest models "
                 "provided by Voyage AI."
             )
-        
+
         async for attempt in self.retry_controller:
             with attempt:
                 response = await voyageai.Embedding.acreate(

@@ -1,7 +1,12 @@
 import functools
 import warnings
 from typing import Any, List, Optional
-from tenacity import Retrying, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
+from tenacity import (
+    Retrying,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+)
 
 import voyageai
 import voyageai.error as error
@@ -24,7 +29,7 @@ class Client:
         max_retries: int = 0,
         timeout: Optional[float] = None,
     ) -> None:
-        
+
         self.api_key = api_key or default_api_key()
 
         self._params = {
@@ -40,7 +45,7 @@ class Client:
                 retry_if_exception_type(error.RateLimitError)
                 | retry_if_exception_type(error.ServiceUnavailableError)
                 | retry_if_exception_type(error.Timeout)
-            )
+            ),
         )
 
     def embed(
@@ -59,7 +64,7 @@ class Client:
                 "function. Please see https://docs.voyageai.com/docs/embeddings for the list of latest models "
                 "provided by Voyage AI."
             )
-        
+
         for attempt in self.retry_controller:
             with attempt:
                 response = voyageai.Embedding.create(
@@ -72,7 +77,7 @@ class Client:
 
         result = EmbeddingsObject(response)
         return result
-    
+
     def rerank(
         self,
         query: str,
@@ -107,7 +112,7 @@ class Client:
                 "to install the dependency."
             )
 
-        tokenizer = Tokenizer.from_pretrained('voyageai/voyage')
+        tokenizer = Tokenizer.from_pretrained("voyageai/voyage")
         tokenizer.no_truncation()
         return tokenizer
 

@@ -12,12 +12,13 @@ class TestClient:
     sample_docs = [
         "This is a test document.",
         "This is a test document 1.",
-        "This is a test document 2."
+        "This is a test document 2.",
     ]
 
-    '''
+    """
     Embedding
-    '''
+    """
+
     def test_client_embed(self):
         vo = voyageai.Client()
         result = vo.embed([self.sample_query], model=self.embed_model)
@@ -51,7 +52,7 @@ class TestClient:
     def test_client_embed_context_length(self):
         vo = voyageai.Client()
         texts = self.sample_docs + [self.sample_query * 1000]
-        
+
         result = vo.embed(texts, model=self.embed_model, truncation=True)
         assert result.total_tokens <= 4096
 
@@ -74,25 +75,28 @@ class TestClient:
         with pytest.raises(error.Timeout):
             vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
 
-    '''
+    """
     Reranker
-    '''
+    """
+
     def test_client_rerank(self):
         vo = voyageai.Client()
         reranking = vo.rerank(self.sample_query, self.sample_docs, self.rerank_model)
         assert len(reranking.results) == len(self.sample_docs)
-        
+
         for i in range(len(self.sample_docs)):
             if i + 1 < len(self.sample_docs):
                 r = reranking.results[i]
                 assert r.relevance_score >= reranking.results[i + 1].relevance_score
                 assert r.document == self.sample_docs[r.index]
-        
+
         assert reranking.total_tokens > 0
 
     def test_client_rerank_top_k(self):
         vo = voyageai.Client()
-        reranking = vo.rerank(self.sample_query, self.sample_docs, self.rerank_model, top_k=2)
+        reranking = vo.rerank(
+            self.sample_query, self.sample_docs, self.rerank_model, top_k=2
+        )
         assert len(reranking.results) == 2
 
     def test_client_rerank_truncation(self):
@@ -106,16 +110,20 @@ class TestClient:
         assert reranking.total_tokens <= 4096 * len(long_docs)
 
         with pytest.raises(error.InvalidRequestError):
-            reranking = vo.rerank(long_query, self.sample_docs, self.rerank_model, truncation=False)
+            reranking = vo.rerank(
+                long_query, self.sample_docs, self.rerank_model, truncation=False
+            )
 
         with pytest.raises(error.InvalidRequestError):
-            reranking = vo.rerank(self.sample_query, long_docs, self.rerank_model, truncation=False)
-    
+            reranking = vo.rerank(
+                self.sample_query, long_docs, self.rerank_model, truncation=False
+            )
+
     def test_client_rerank_invalid_request(self):
         vo = voyageai.Client()
         with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
-        
+
         with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")
 
@@ -124,9 +132,10 @@ class TestClient:
         with pytest.raises(error.InvalidRequestError):
             vo.rerank(self.sample_query, long_docs, self.rerank_model)
 
-    '''
+    """
     Tokenizer
-    '''
+    """
+
     def test_client_tokenize(self):
         vo = voyageai.Client()
         result = vo.tokenize(self.sample_docs)

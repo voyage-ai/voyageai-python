@@ -4,17 +4,14 @@ from voyageai.api_resources import VoyageResponse
 
 
 RerankingResult = namedtuple(
-    "RerankingResult", 
-    ["index", "document", "relevance_score"]
+    "RerankingResult", ["index", "document", "relevance_score"]
 )
 
 
 class RerankingObject:
 
-    def __init__(
-        self, documents: List[str], response: VoyageResponse
-    ):
-        self.results : List[RerankingResult] = [
+    def __init__(self, documents: List[str], response: VoyageResponse):
+        self.results: List[RerankingResult] = [
             RerankingResult(
                 index=d.index,
                 document=documents[d.index],
@@ -22,4 +19,4 @@ class RerankingObject:
             )
             for d in response.data
         ]
-        self.total_tokens : int = response.usage.total_tokens
+        self.total_tokens: int = response.usage.total_tokens

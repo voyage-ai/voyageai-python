@@ -1,7 +1,6 @@
 import json
 from copy import deepcopy
 
-from voyageai import util
 from voyageai.api_resources.api_requestor import VoyageHttpResponse
 
 
@@ -79,9 +78,7 @@ class VoyageResponse(dict):
         # Wipe old state before setting new.
         self.clear()
         for k, v in values.items():
-            super(VoyageResponse, self).__setitem__(
-                k, convert_to_voyage_response(v)
-            )
+            super(VoyageResponse, self).__setitem__(k, convert_to_voyage_response(v))
 
         self._previous = values
 
@@ -158,10 +155,7 @@ def convert_to_voyage_response(resp):
         resp = resp.data
 
     if isinstance(resp, list):
-        return [
-            convert_to_voyage_response(i)
-            for i in resp
-        ]
+        return [convert_to_voyage_response(i) for i in resp]
     elif isinstance(resp, dict) and not isinstance(resp, VoyageResponse):
         resp = resp.copy()
         return VoyageResponse.construct_from(resp)

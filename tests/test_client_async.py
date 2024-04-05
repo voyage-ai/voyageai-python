@@ -12,12 +12,13 @@ class TestAsyncClient:
     sample_docs = [
         "This is a test document.",
         "This is a test document 1.",
-        "This is a test document 2."
+        "This is a test document 2.",
     ]
 
     """
     Embedding
     """
+
     @pytest.mark.asyncio
     async def test_async_client_embed(self):
         vo = voyageai.AsyncClient()
@@ -35,11 +36,15 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_async_client_embed_input_type(self):
         vo = voyageai.AsyncClient()
-        query_embd = (await vo.embed(
-            [self.sample_query], model=self.embed_model, input_type="query")
+        query_embd = (
+            await vo.embed(
+                [self.sample_query], model=self.embed_model, input_type="query"
+            )
         ).embeddings[0]
-        doc_embd = (await vo.embed(
-            self.sample_docs, model=self.embed_model, input_type="document")
+        doc_embd = (
+            await vo.embed(
+                self.sample_docs, model=self.embed_model, input_type="document"
+            )
         ).embeddings[0]
         assert len(query_embd) == 1024
         assert len(doc_embd) == 1024
@@ -66,26 +71,31 @@ class TestAsyncClient:
     """
     Reranker
     """
+
     @pytest.mark.asyncio
     async def test_async_client_rerank(self):
         vo = voyageai.AsyncClient()
-        reranking = await vo.rerank(self.sample_query, self.sample_docs, self.rerank_model)
+        reranking = await vo.rerank(
+            self.sample_query, self.sample_docs, self.rerank_model
+        )
         assert len(reranking.results) == len(self.sample_docs)
-        
+
         for i in range(len(self.sample_docs)):
             if i + 1 < len(self.sample_docs):
                 r = reranking.results[i]
                 assert r.relevance_score >= reranking.results[i + 1].relevance_score
                 assert r.document == self.sample_docs[r.index]
-        
+
         assert reranking.total_tokens > 0
 
     @pytest.mark.asyncio
     async def test_async_client_rerank_invalid_request(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(error.InvalidRequestError):
-            await vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
-        
+            await vo.rerank(
+                self.sample_query, self.sample_docs * 400, self.rerank_model
+            )
+
         with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")
 
@@ -97,6 +107,7 @@ class TestAsyncClient:
     """
     Tokenizer
     """
+
     def test_async_client_tokenize(self):
         vo = voyageai.AsyncClient()
         result = vo.tokenize(self.sample_docs)

@@ -40,7 +40,9 @@ class APIResource(VoyageResponse):
         request_timeout=None,
         **params,
     ):
-        requestor, url, params, headers = cls.__prepare_create_request(api_key, api_base, **params)
+        requestor, url, params, headers = cls.__prepare_create_request(
+            api_key, api_base, **params
+        )
 
         response = requestor.request(
             "post",
@@ -63,7 +65,9 @@ class APIResource(VoyageResponse):
         request_timeout=None,
         **params,
     ):
-        requestor, url, params, headers = cls.__prepare_create_request(api_key, api_base, **params)
+        requestor, url, params, headers = cls.__prepare_create_request(
+            api_key, api_base, **params
+        )
         response = await requestor.arequest(
             "post",
             url,

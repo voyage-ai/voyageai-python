@@ -2,21 +2,16 @@ import asyncio
 import json
 import time
 import platform
-import sys
 import threading
 import time
 import warnings
 from json import JSONDecodeError
 from typing import (
     AsyncContextManager,
-    AsyncGenerator,
-    Callable,
     Dict,
-    Iterator,
     Optional,
     Tuple,
     Union,
-    overload,
 )
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
@@ -184,7 +179,7 @@ class APIRequestor:
                 result.release()
             await ctx.__aexit__(None, None, None)
             raise
-        
+
         # Close the request before exiting session context.
         result.release()
         await ctx.__aexit__(None, None, None)
@@ -409,14 +404,16 @@ class APIRequestor:
 
     def _interpret_response(self, result: requests.Response) -> VoyageHttpResponse:
         """Returns the response(s) and a bool indicating whether it is a stream."""
-        
+
         return self._interpret_response_line(
             result.content.decode("utf-8"),
             result.status_code,
             result.headers,
         )
 
-    async def _interpret_async_response(self, result: aiohttp.ClientResponse) -> VoyageHttpResponse:
+    async def _interpret_async_response(
+        self, result: aiohttp.ClientResponse
+    ) -> VoyageHttpResponse:
         """Returns the response(s) and a bool indicating whether it is a stream."""
         try:
             await result.read()
@@ -430,7 +427,9 @@ class APIRequestor:
             result.headers,
         )
 
-    def _interpret_response_line(self, rbody: str, rcode: int, rheaders) -> VoyageHttpResponse:
+    def _interpret_response_line(
+        self, rbody: str, rcode: int, rheaders
+    ) -> VoyageHttpResponse:
         # HTTP 204 response code does not have any content in the body.
         if rcode == 204:
             return VoyageHttpResponse(None, rheaders)
@@ -450,7 +449,7 @@ class APIRequestor:
                 headers=rheaders,
             )
         try:
-            if 'text/plain' in rheaders.get('Content-Type', ''):
+            if "text/plain" in rheaders.get("Content-Type", ""):
                 data = rbody
             else:
                 data = json.loads(rbody)
@@ -461,11 +460,9 @@ class APIRequestor:
 
         resp = VoyageHttpResponse(data, rheaders)
         if 400 <= rcode < 500:
-            raise self.handle_error_response(
-                rbody, rcode, resp.data, rheaders
-            )
+            raise self.handle_error_response(rbody, rcode, resp.data, rheaders)
         return resp
-    
+
     def handle_error_response(self, rbody, rcode, resp, rheaders):
         try:
             error_message = resp["detail"]
@@ -479,7 +476,8 @@ class APIRequestor:
             )
 
         util.log_info(
-            "Voyage API error received", error_message=error_message,
+            "Voyage API error received",
+            error_message=error_message,
         )
 
         if rcode == 400:
@@ -495,9 +493,7 @@ class APIRequestor:
                 error_message, rbody, rcode, resp, rheaders
             )
         elif rcode == 429:
-            return error.RateLimitError(
-                error_message, rbody, rcode, resp, rheaders
-            )
+            return error.RateLimitError(error_message, rbody, rcode, resp, rheaders)
         else:
             return error.APIError(
                 f"{error_message} {rbody} {rcode} {resp} {rheaders}",
@@ -520,7 +516,7 @@ class AioHTTPSession(AsyncContextManager):
             self._should_close_session = True
 
         return self._session
-    
+
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._session is None:
             raise RuntimeError("Session is not initialized")

@@ -23,7 +23,12 @@ from voyageai.api_resources import Embedding, Reranking
 from voyageai.version import VERSION
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
-from voyageai.embeddings_utils import get_embedding, get_embeddings, aget_embedding, aget_embeddings
+from voyageai.embeddings_utils import (
+    get_embedding,
+    get_embeddings,
+    aget_embedding,
+    aget_embeddings,
+)
 
 if TYPE_CHECKING:
     import requests
@@ -41,7 +46,7 @@ log = None  # Set to either 'debug' or 'info', controls console logging
 
 requestssession: Optional[
     Union["requests.Session", Callable[[], "requests.Session"]]
-] = None # Provide a requests.Session or Session factory.
+] = None  # Provide a requests.Session or Session factory.
 
 aiosession: ContextVar[Optional["ClientSession"]] = ContextVar(
     "aiohttp-session", default=None

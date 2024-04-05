@@ -15,9 +15,7 @@ __all__ = [
     "logfmt",
 ]
 
-api_key_to_header = (
-    lambda key: {"Authorization": f"Bearer {key}"}
-)
+api_key_to_header = lambda key: {"Authorization": f"Bearer {key}"}
 
 
 def _console_log_level():
@@ -70,7 +68,7 @@ def logfmt(props):
 def default_api_key() -> str:
     api_key_path = voyageai.api_key_path or os.environ.get("VOYAGE_API_KEY_PATH")
     api_key = voyageai.api_key or os.environ.get("VOYAGE_API_KEY")
-    
+
     # When api_key_path is specified, it overwrites api_key
     if api_key_path:
         with open(api_key_path, "rt") as k:

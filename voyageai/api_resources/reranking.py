@@ -12,7 +12,7 @@ class Reranking(APIResource):
         """
         response = super().create(*args, **kwargs)
         return response
-        
+
     @classmethod
     async def acreate(cls, *args, **kwargs):
         """
