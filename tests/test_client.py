@@ -138,17 +138,39 @@ class TestClient:
 
     def test_client_tokenize(self):
         vo = voyageai.Client()
-        result = vo.tokenize(self.sample_docs)
+        result = vo.tokenize(self.sample_docs, self.embed_model)
         assert isinstance(result, list)
         assert len(result) == 3
         assert len(result[0].tokens) == 7
         assert len(result[1].tokens) == 9
         assert len(result[2].tokens) == 9
 
+        result = vo.tokenize(self.sample_docs, self.rerank_model)
+        assert len(result) == 3
+        assert len(result[0].tokens) == 7
+        assert len(result[1].tokens) == 9
+        assert len(result[2].tokens) == 9
+
+    def test_client_tokenize_model(self):
+        vo = voyageai.Client()
+
+        result = vo.tokenize([self.sample_query], "voyage-finance-2")
+        assert len(result[0].tokens) == 7
+
+        result = vo.tokenize([self.sample_query], "rerank-1")
+        assert len(result[0].tokens) == 7
+
+        with pytest.raises(Exception):
+            with pytest.warns(UserWarning):
+                vo.tokenize(self.sample_docs, "wrong-model")
+
     def test_client_count_tokens(self):
         vo = voyageai.Client()
-        total_tokens = vo.count_tokens([self.sample_query])
+        total_tokens = vo.count_tokens([self.sample_query], self.embed_model)
         assert total_tokens == 7
 
-        total_tokens = vo.count_tokens(self.sample_docs)
+        total_tokens = vo.count_tokens(self.sample_docs, self.embed_model)
         assert total_tokens == 25
+
+        total_tokens = vo.count_tokens([self.sample_query, self.sample_docs[0]], self.rerank_model)
+        assert total_tokens == 14

@@ -110,7 +110,7 @@ class TestAsyncClient:
 
     def test_async_client_tokenize(self):
         vo = voyageai.AsyncClient()
-        result = vo.tokenize(self.sample_docs)
+        result = vo.tokenize(self.sample_docs, self.embed_model)
         assert isinstance(result, list)
         assert len(result) == 3
         assert len(result[0].tokens) == 7
@@ -119,8 +119,8 @@ class TestAsyncClient:
 
     def test_async_client_count_tokens(self):
         vo = voyageai.Client()
-        total_tokens = vo.count_tokens([self.sample_query])
+        total_tokens = vo.count_tokens([self.sample_query], self.embed_model)
         assert total_tokens == 7
 
-        total_tokens = vo.count_tokens(self.sample_docs)
+        total_tokens = vo.count_tokens(self.sample_docs, self.embed_model)
         assert total_tokens == 25

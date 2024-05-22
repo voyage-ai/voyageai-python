@@ -101,30 +101,48 @@ class Client:
         result = RerankingObject(documents, response)
         return result
 
-    @property
     @functools.lru_cache()
-    def tokenizer(self):
+    def tokenizer(self, model: str):
         try:
             from tokenizers import Tokenizer
         except ImportError:
             raise ImportError(
-                "tokenizers package not found. Please run `pip install tokenizers` "
+                "The package `tokenizers` is not found. Please run `pip install tokenizers` "
                 "to install the dependency."
             )
 
-        tokenizer = Tokenizer.from_pretrained("voyageai/voyage")
-        tokenizer.no_truncation()
+        try:
+            tokenizer = Tokenizer.from_pretrained(f"voyageai/{model}")
+            tokenizer.no_truncation()
+        except:
+            warnings.warn(
+                f"Failed to load the tokenizer for `{model}`. Please ensure that it is a valid model name."
+            )
+            raise
+        
         return tokenizer
 
     def tokenize(
         self,
         texts: List[str],
+        model: Optional[str] = None,
     ) -> List[Any]:
-        return self.tokenizer.encode_batch(texts)
+
+        if model is None:
+            warnings.warn(
+                "Please specify the `model` when using the tokenizer. Voyage's older models use the same "
+                "tokenizer, but new models may use different tokenizers. If `model` is not specified, "
+                "the old tokenizer will be used and the results might be different. `model` will be a "
+                "required argument in the future."
+            )
+            model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
+
+        return self.tokenizer(model).encode_batch(texts)
 
     def count_tokens(
         self,
         texts: List[str],
+        model: Optional[str] = None,
     ) -> int:
-        tokenized = self.tokenize(texts)
+        tokenized = self.tokenize(texts, model)
         return sum([len(t) for t in tokenized])
