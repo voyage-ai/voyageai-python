@@ -74,7 +74,7 @@ async def _aget_embeddings(
     return [d["embedding"] for d in data]
 
 
-def _check_input_type(input_type: str):
+def _check_input_type(input_type: Optional[str]):
     if input_type and input_type not in ["query", "document"]:
         raise ValueError(
             f"input_type {input_type} is invalid. Options: None, 'query', 'document'."
