@@ -9,12 +9,13 @@ from tenacity import (
 )
 
 import voyageai
+from voyageai._base import _BaseClient
 import voyageai.error as error
 from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
 
 
-class Client:
+class Client(_BaseClient):
     """Voyage AI Client
 
     Args:
@@ -28,14 +29,8 @@ class Client:
         api_key: Optional[str] = None,
         max_retries: int = 0,
         timeout: Optional[float] = None,
-    ) -> None:
-
-        self.api_key = api_key or default_api_key()
-
-        self._params = {
-            "api_key": self.api_key,
-            "request_timeout": timeout,
-        }
+    ) ->None:
+        super().__init__(api_key, max_retries, timeout)
 
         self.retry_controller = Retrying(
             reraise=True,
@@ -101,48 +96,3 @@ class Client:
         result = RerankingObject(documents, response)
         return result
 
-    @functools.lru_cache()
-    def tokenizer(self, model: str):
-        try:
-            from tokenizers import Tokenizer
-        except ImportError:
-            raise ImportError(
-                "The package `tokenizers` is not found. Please run `pip install tokenizers` "
-                "to install the dependency."
-            )
-
-        try:
-            tokenizer = Tokenizer.from_pretrained(f"voyageai/{model}")
-            tokenizer.no_truncation()
-        except:
-            warnings.warn(
-                f"Failed to load the tokenizer for `{model}`. Please ensure that it is a valid model name."
-            )
-            raise
-        
-        return tokenizer
-
-    def tokenize(
-        self,
-        texts: List[str],
-        model: Optional[str] = None,
-    ) -> List[Any]:
-
-        if model is None:
-            warnings.warn(
-                "Please specify the `model` when using the tokenizer. Voyage's older models use the same "
-                "tokenizer, but new models may use different tokenizers. If `model` is not specified, "
-                "the old tokenizer will be used and the results might be different. `model` will be a "
-                "required argument in the future."
-            )
-            model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
-
-        return self.tokenizer(model).encode_batch(texts)
-
-    def count_tokens(
-        self,
-        texts: List[str],
-        model: Optional[str] = None,
-    ) -> int:
-        tokenized = self.tokenize(texts, model)
-        return sum([len(t) for t in tokenized])

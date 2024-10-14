@@ -8,13 +8,14 @@ from tenacity import (
 )
 
 import voyageai
+from voyageai._base import _BaseClient
 import voyageai.error as error
 from voyageai.util import default_api_key
 from voyageai.client import Client
 from voyageai.object import EmbeddingsObject, RerankingObject
 
 
-class AsyncClient(Client):
+class AsyncClient(_BaseClient):
     """Voyage AI Async Client
 
     Args:
@@ -29,13 +30,7 @@ class AsyncClient(Client):
         max_retries: int = 0,
         timeout: Optional[float] = None,
     ) -> None:
-
-        self.api_key = api_key or default_api_key()
-
-        self._params = {
-            "api_key": self.api_key,
-            "request_timeout": timeout,
-        }
+        super().__init__(api_key, max_retries, timeout)
 
         self.retry_controller = AsyncRetrying(
             reraise=True,
