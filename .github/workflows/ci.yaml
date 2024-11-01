@@ -14,6 +14,7 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     env:
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+      POETRY_HOME: "/opt/poetry"
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -22,8 +23,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install poetry
-      run: pipx install poetry==1.8.4
+      run: |
+        python3 -m venv $POETRY_HOME
+        $POETRY_HOME/bin/pip install poetry==1.8.4
+        $POETRY_HOME/bin/poetry --version
     - name: Install package
-      run: poetry install
+      run: $POETRY_HOME/bin/poetry install
     - name: Run tests
-      run: poetry run pytest
+      run: $POETRY_HOME/bin/poetry run pytest
