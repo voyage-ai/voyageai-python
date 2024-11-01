@@ -8,12 +8,12 @@ import warnings
 from typing import Any, List, Optional, Union, Dict
 
 from huggingface_hub import hf_hub_download
-import PIL.Image
+from PIL.Image import Image
 
 import voyageai
 import voyageai.error as error
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest, MultimodalInputSegmentText, \
-    MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64
+    MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64, MultimodalEmbeddingsObject
 from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
 
@@ -35,7 +35,7 @@ def _get_client_config(
     return data_dict
 
 
-class _BaseClient:
+class _BaseClient(ABC):
     """Voyage AI Client
 
     Args:
@@ -58,7 +58,6 @@ class _BaseClient:
             "request_timeout": timeout,
         }
 
-
     @abstractmethod    
     def embed(
         self,
@@ -66,7 +65,7 @@ class _BaseClient:
         model: Optional[str] = None,
         input_type: Optional[str] = None,
         truncation: bool = True,
-    ) -> Union[EmbeddingsObject, Awaitable[EmbeddingsObject]]:
+    ) -> EmbeddingsObject:
         pass
 
     @abstractmethod
@@ -77,7 +76,17 @@ class _BaseClient:
         model: str,
         top_k: Optional[int] = None,
         truncation: bool = True,
-    ) -> Union[RerankingObject, Awaitable[RerankingObject]]:
+    ) -> RerankingObject:
+        pass
+
+    @abstractmethod
+    def multimodal_embed(
+        self,
+        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        model: str,
+        input_type: Optional[str] = None,
+        truncation: bool = True,
+    ) -> MultimodalEmbeddingsObject:
         pass
 
     @functools.lru_cache()
@@ -128,7 +137,7 @@ class _BaseClient:
 
     def count_usage(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
         model: str,
     ) -> dict[str, int]:
         """
