@@ -33,24 +33,24 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
   test:
-    name: Testing Suite
+    name: Tests
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     env:
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+    - name: Install poetry
+      run: pipx install poetry==1.8.4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry==1.2.0
-        poetry install --with dev
+        cache: 'poetry'
+    - name: Install package
+      run: poetry install
     - name: Run tests
       run: poetry run pytest
