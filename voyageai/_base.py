@@ -8,7 +8,7 @@ import warnings
 from typing import Any, List, Optional, Union, Dict
 
 from huggingface_hub import hf_hub_download
-from PIL.Image import Image
+import PIL.Image
 
 import voyageai
 import voyageai.error as error
@@ -82,7 +82,7 @@ class _BaseClient(ABC):
     @abstractmethod
     def multimodal_embed(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
@@ -137,9 +137,9 @@ class _BaseClient(ABC):
 
     def count_usage(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
         model: str,
-    ) -> dict[str, int]:
+    ) -> Dict[str, int]:
         """
         This method returns estimated usage metrics for the provided input.
         Currently, only multimodal models are supported. Image URL segments are not supported.
