@@ -6,7 +6,7 @@ authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8,<3.13"
 requests = "*"
 aiohttp = "*"
 tenacity = "*"
