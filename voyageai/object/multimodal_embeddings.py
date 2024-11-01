@@ -3,8 +3,7 @@ import PIL.Image
 import PIL.ImageFile
 from io import BytesIO
 from enum import Enum
-from typing import List, Optional, Union, Dict, Literal
-from typing_extensions import Annotated
+from typing import List, Optional, Union, Dict, Literal, Annotated
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
