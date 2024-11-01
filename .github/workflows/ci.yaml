@@ -1,4 +1,4 @@
-name: "CodeQL Advanced"
+name: "CI"
 on:
   push:
     branches: [ "main" ]
@@ -7,7 +7,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    name: Security Analysis (${{ matrix.language }})
     runs-on: ubuntu-22.04
     permissions:
       security-events: write
@@ -33,7 +33,7 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
   test:
-    name: Run testing suite
+    name: Testing Suite
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -50,7 +50,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install .
+        pip install poetry==1.2.0
+        poetry install --with dev
     - name: Run tests
-      run: |
-        pytest tests
+      run: poetry run pytest
