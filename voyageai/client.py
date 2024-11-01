@@ -1,18 +1,18 @@
-import functools
 import warnings
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union, Dict
 from tenacity import (
     Retrying,
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
 )
+from PIL.Image import Image
 
 import voyageai
 from voyageai._base import _BaseClient
 import voyageai.error as error
-from voyageai.util import default_api_key
-from voyageai.object import EmbeddingsObject, RerankingObject
+from voyageai.object.multimodal_embeddings import MultimodalInputRequest
+from voyageai.object import EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
 
 
 class Client(_BaseClient):
@@ -96,3 +96,33 @@ class Client(_BaseClient):
         result = RerankingObject(documents, response)
         return result
 
+    def multimodal_embed(
+        self,
+        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        model: str,
+        input_type: Optional[str] = None,
+        truncation: bool = True,
+    ) -> MultimodalEmbeddingsObject:
+        """
+        Generate multimodal embeddings for the provided inputs using the specified model.
+
+        :param inputs: Either a list of dictionaries (each with 'content') or a list of lists containing strings and/or PIL images.
+        :param model: The model identifier.
+        :param input_type: Optional input type.
+        :param truncation: Whether to apply truncation.
+        :return: An instance of MultimodalEmbeddingsObject.
+        """
+        for attempt in self.retry_controller:
+            with attempt:
+                response = voyageai.MultimodalEmbedding.create(
+                    **MultimodalInputRequest.from_user_inputs(
+                        inputs=inputs,
+                        model=model,
+                        input_type=input_type,
+                        truncation=truncation,
+                    ).model_dump(),
+                    **self._params,
+                )
+
+        result = MultimodalEmbeddingsObject(response)
+        return result

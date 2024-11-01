@@ -1,5 +1,7 @@
 import warnings
-from typing import List, Optional
+from typing import List, Optional, Union, Dict
+
+from PIL.Image import Image
 from tenacity import (
     AsyncRetrying,
     stop_after_attempt,
@@ -10,9 +12,8 @@ from tenacity import (
 import voyageai
 from voyageai._base import _BaseClient
 import voyageai.error as error
-from voyageai.util import default_api_key
-from voyageai.client import Client
-from voyageai.object import EmbeddingsObject, RerankingObject
+from voyageai.object.multimodal_embeddings import MultimodalInputRequest
+from voyageai.object import EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
 
 
 class AsyncClient(_BaseClient):
@@ -94,4 +95,36 @@ class AsyncClient(_BaseClient):
                 )
 
         result = RerankingObject(documents, response)
+        return result
+
+    async def multimodal_embed(
+        self,
+        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        model: str,
+        input_type: Optional[str] = None,
+        truncation: bool = True,
+    ) -> MultimodalEmbeddingsObject:
+        """
+        Generate multimodal embeddings asynchronously for the provided inputs using the specified model.
+
+        :param inputs: Either a list of dictionaries (each with 'content') or a list of lists containing strings and/or PIL images.
+        :param model: The model identifier.
+        :param input_type: Optional input type.
+        :param truncation: Whether to apply truncation.
+        :return: An instance of MultimodalEmbeddingsObject.
+        """
+
+        async for attempt in self.retry_controller:
+            with attempt:
+                response = await voyageai.MultimodalEmbedding.acreate(
+                    **MultimodalInputRequest.from_user_inputs(
+                        inputs=inputs,
+                        model=model,
+                        input_type=input_type,
+                        truncation=truncation,
+                    ).model_dump(),
+                    **self._params,
+                )
+
+        result = MultimodalEmbeddingsObject(response)
         return result
