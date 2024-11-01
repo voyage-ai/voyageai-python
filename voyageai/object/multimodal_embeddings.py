@@ -4,7 +4,8 @@ import PIL.ImageFile
 from io import BytesIO
 from enum import Enum
 from pydantic import BaseModel, Field, Extra, ValidationError
-from typing import List, Optional, Union, Dict, Literal, Annotated
+from typing import List, Optional, Union, Dict, Literal
+from typing_extensions import Annotated
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
