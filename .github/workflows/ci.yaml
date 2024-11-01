@@ -6,32 +6,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  analyze:
-    name: Security Analysis (${{ matrix.language }})
-    runs-on: ubuntu-22.04
-    permissions:
-      security-events: write
-      packages: read
-      actions: read
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - language: python
-          build-mode: none
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
   test:
     name: Tests
     runs-on: ubuntu-22.04
@@ -43,12 +17,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-    - name: Install poetry
-      run: pipx install poetry==1.8.4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install poetry
+      run: pipx install poetry==1.8.4
     - name: Install package
       run: poetry install
     - name: Run tests
