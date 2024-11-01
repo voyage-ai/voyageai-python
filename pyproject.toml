@@ -16,7 +16,7 @@ numpy = [
 ]
 aiolimiter = "*"
 pillow = "*"
-pydantic = "*"
+pydantic = ">=1.8"
 tokenizers = "*"
 
 [tool.poetry.group.test.dependencies]
