@@ -122,7 +122,7 @@ class AsyncClient(_BaseClient):
                         model=model,
                         input_type=input_type,
                         truncation=truncation,
-                    ).model_dump(),
+                    ).dict(),
                     **self._params,
                 )
 
