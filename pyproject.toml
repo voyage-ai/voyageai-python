@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.2.4"
+version = "0.3.0rc0"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
@@ -12,6 +12,9 @@ aiohttp = "^3.5"
 tenacity = ">=8.0.1"
 numpy = ">=1.11"
 aiolimiter = "^1.1.0"
+pillow = "^9.5.0"
+pydantic = "^2.5.3"
+tokenizers = "^0.20.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
