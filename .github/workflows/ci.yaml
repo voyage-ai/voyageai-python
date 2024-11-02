@@ -1,0 +1,36 @@
+name: CI Testing
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_call:
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    env:
+      VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+      POETRY_HOME: "/opt/poetry"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install poetry
+      run: |
+        python3 -m venv $POETRY_HOME
+        $POETRY_HOME/bin/pip install poetry==1.8.4
+        $POETRY_HOME/bin/poetry --version
+    - name: Install package
+      run: $POETRY_HOME/bin/poetry install
+    - name: Run tests
+      run: $POETRY_HOME/bin/poetry run pytest
