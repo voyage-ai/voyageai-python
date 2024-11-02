@@ -105,9 +105,9 @@ sample_input_dict_mixed_01 = {
 
 sample_input_list_text_01 = ["this is an image of a blue sailboat on a lake."]
 
-sample_input_list_img_01 = [Image.open("example_image_01.jpg")]
+sample_input_list_img_01 = [Image.open("tests/example_image_01.jpg")]
 
-sample_input_list_img_02 = [Image.open("example_image_01.jpg").resize((256, 256))]
+sample_input_list_img_02 = [Image.open("tests/example_image_01.jpg").resize((256, 256))]
 
 sample_input_list_img_03 = [Image.new("L", (400, 400), color=128)]
 
