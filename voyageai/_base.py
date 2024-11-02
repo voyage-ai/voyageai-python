@@ -2,7 +2,6 @@ import base64
 import io
 import json
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable
 import functools
 import warnings
 from typing import Any, List, Optional, Union, Dict
@@ -173,7 +172,7 @@ class _BaseClient(ABC):
 
             for segment in item.content:
                 if isinstance(segment, MultimodalInputSegmentImageURL):
-                    raise voyageai.error.InvalidRequestError("count_tokens_multimodal does not support image URL segments.")
+                    raise voyageai.error.InvalidRequestError("count_usage does not support image URL segments.")
 
                 elif isinstance(segment, MultimodalInputSegmentImageBase64):
                     try:
