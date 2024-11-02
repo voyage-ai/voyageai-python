@@ -1,20 +1,20 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.0rc0"
+version = "0.3.0"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
-requests = "^2.20"
-aiohttp = "^3.5"
-tenacity = ">=8.0.1"
-numpy = ">=1.11"
-aiolimiter = "^1.1.0"
-pillow = "^9.5.0"
-pydantic = "^2.5.3"
-tokenizers = "^0.20.0"
+python = "^3.9,<3.13"
+requests = "*"
+aiohttp = "*"
+tenacity = "*"
+oldest-supported-numpy = "*"
+aiolimiter = "*"
+pillow = "*"
+pydantic = ">=1.10.8"
+tokenizers = ">=0.14.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
