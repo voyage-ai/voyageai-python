@@ -222,8 +222,8 @@ class MultimodalInputRequest(BaseModel):
         if isinstance(item, str):
             return MultimodalInputSegmentText(text=item)
         elif isinstance(item, PIL.Image.Image):
-            image_base64 = MultimodalInputRequest._image_to_base64(item)
-            return MultimodalInputSegmentImageBase64(image_base64=image_base64, conversion_kwargs={"lossless": True})
+            image_base64 = MultimodalInputRequest._image_to_base64(item, conversion_kwargs={"lossless": True})
+            return MultimodalInputSegmentImageBase64(image_base64=image_base64)
         else:
             raise ValueError(
                 f"Unsupported item type at input {input_idx}, item {item_idx}: {type(item).__name__}"
