@@ -1,1 +1,3 @@
-VERSION = "0.2.3"
+import importlib.metadata
+
+VERSION = importlib.metadata.version("voyageai")

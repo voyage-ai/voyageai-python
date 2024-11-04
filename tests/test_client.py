@@ -1,4 +1,6 @@
 import pytest
+import importlib.metadata
+
 import voyageai
 import voyageai.error as error
 
@@ -174,3 +176,6 @@ class TestClient:
 
         total_tokens = vo.count_tokens([self.sample_query, self.sample_docs[0]], self.rerank_model)
         assert total_tokens == 14
+
+    def test_client_version(self):
+        assert voyageai.__version__ == importlib.metadata.version("voyageai")
