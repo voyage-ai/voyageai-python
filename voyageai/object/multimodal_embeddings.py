@@ -223,7 +223,7 @@ class MultimodalInputRequest(BaseModel):
             return MultimodalInputSegmentText(text=item)
         elif isinstance(item, PIL.Image.Image):
             image_base64 = MultimodalInputRequest._image_to_base64(item)
-            return MultimodalInputSegmentImageBase64(image_base64=image_base64)
+            return MultimodalInputSegmentImageBase64(image_base64=image_base64, conversion_kwargs={lossless: True})
         else:
             raise ValueError(
                 f"Unsupported item type at input {input_idx}, item {item_idx}: {type(item).__name__}"
@@ -234,6 +234,7 @@ class MultimodalInputRequest(BaseModel):
         image: PIL.Image.Image,
         target_format: str = "WEBP",
         target_mime_type: str = "image/webp",
+        conversion_kwargs: Dict[str, Any] = {},
     ) -> str:
         """
         Convert a PIL Image to a Base64-encoded data URI.
@@ -244,6 +245,6 @@ class MultimodalInputRequest(BaseModel):
         :return: A Base64-encoded data URI string.
         """
         buffered = BytesIO()
-        image.save(buffered, format=target_format)
+        image.convert("RGB").save(buffered, format=target_format, **conversion_kwargs)
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return f"data:{target_mime_type};base64,{img_base64}"
