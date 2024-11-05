@@ -270,6 +270,24 @@ class TestClient:
                 client, inputs=[], model=multimodal_model, truncation="test"
             )
 
+    def test_input_formats_yield_identical_result(self, client, multimodal_model, similarity_threshold):
+        input_1 = {
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": "https://github.com/voyage-ai/voyageai-python/blob/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg?raw=true"
+                },
+            ],
+        }
+        input_2 = sample_input_list_img_01
+        output_1 = embed_with_client(client, inputs=[input_1], model=multimodal_model)
+        output_2 = embed_with_client(client, inputs=[input_2], model=multimodal_model)
+        assert len(output_1.embeddings[0]) == len(output_2.embeddings[0])
+        assert (
+            cosine_similarity(output_1.embeddings[0], output_2.embeddings[0])
+            >= similarity_threshold
+        )
+
     @pytest.mark.parametrize(
         "client_kwargs",
         [{"timeout": 1, "max_retries": 1}],
