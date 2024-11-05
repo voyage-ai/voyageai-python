@@ -177,6 +177,10 @@ class TestClient:
                 [sample_input_dict_mixed_01, sample_input_list_mixed_01],
                 voyageai.error.InvalidRequestError,
             ),  # no mixing dict and list
+            (
+                {},
+                voyageai.error.InvalidRequestError
+            ), # inputs is not a list
         ],
     )
     def test_client_multimodal_embed_raises_exception(
