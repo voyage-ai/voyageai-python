@@ -3,7 +3,7 @@ import PIL.Image
 import PIL.ImageFile
 from io import BytesIO
 from enum import Enum
-from typing import List, Optional, Union, Dict, Literal, Annotated
+from typing import List, Optional, Union, Dict, Literal, Annotated, Any
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
@@ -222,7 +222,7 @@ class MultimodalInputRequest(BaseModel):
         if isinstance(item, str):
             return MultimodalInputSegmentText(text=item)
         elif isinstance(item, PIL.Image.Image):
-            image_base64 = MultimodalInputRequest._image_to_base64(item)
+            image_base64 = MultimodalInputRequest._image_to_base64(item, conversion_kwargs={"lossless": True})
             return MultimodalInputSegmentImageBase64(image_base64=image_base64)
         else:
             raise ValueError(
@@ -234,6 +234,7 @@ class MultimodalInputRequest(BaseModel):
         image: PIL.Image.Image,
         target_format: str = "WEBP",
         target_mime_type: str = "image/webp",
+        conversion_kwargs: Dict[str, Any] = {},
     ) -> str:
         """
         Convert a PIL Image to a Base64-encoded data URI.
@@ -244,6 +245,6 @@ class MultimodalInputRequest(BaseModel):
         :return: A Base64-encoded data URI string.
         """
         buffered = BytesIO()
-        image.save(buffered, format=target_format)
+        image.convert("RGB").save(buffered, format=target_format, **conversion_kwargs)
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return f"data:{target_mime_type};base64,{img_base64}"
