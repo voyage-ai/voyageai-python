@@ -68,6 +68,33 @@ class TestAsyncClient:
         with pytest.raises(error.Timeout):
             await vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
 
+    @pytest.mark.asyncio
+    async def test_async_client_embed_output_dtype(self):
+        vo = voyageai.AsyncClient()
+        result = await vo.embed([self.sample_query], model=self.embed_model)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+        assert result.total_tokens > 0
+
+        conversion_enabled_model = "voyage-code-3"
+
+        result = await vo.embed([self.sample_query], model=conversion_enabled_model)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+
+        result = await vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="int8", output_dimension=2048)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 2048
+        assert isinstance(result.embeddings[0][0], int)
+
+        result = await vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="ubinary", output_dimension=256)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 32
+        assert isinstance(result.embeddings[0][0], int)
+
+
     """
     Reranker
     """

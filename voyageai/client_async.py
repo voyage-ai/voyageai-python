@@ -50,6 +50,8 @@ class AsyncClient(_BaseClient):
         model: Optional[str] = None,
         input_type: Optional[str] = None,
         truncation: bool = True,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
     ) -> EmbeddingsObject:
 
         if model is None:
@@ -68,6 +70,8 @@ class AsyncClient(_BaseClient):
                     model=model,
                     input_type=input_type,
                     truncation=truncation,
+                    output_dtype=output_dtype,
+                    output_dimension=output_dimension,
                     **self._params,
                 )
 

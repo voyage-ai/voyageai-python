@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from voyageai.api_resources import VoyageResponse
 
 
 class EmbeddingsObject:
 
     def __init__(self, response: Optional[VoyageResponse] = None):
-        self.embeddings: List[List[float]] = []
+        self.embeddings: Union[List[List[float]], List[List[int]]] = []
         self.total_tokens: int = 0
         if response:
             self.update(response)

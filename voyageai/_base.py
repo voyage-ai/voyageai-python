@@ -64,6 +64,8 @@ class _BaseClient(ABC):
         model: Optional[str] = None,
         input_type: Optional[str] = None,
         truncation: bool = True,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
     ) -> EmbeddingsObject:
         pass
 

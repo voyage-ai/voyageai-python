@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import sys
+from typing import Optional
 import voyageai
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
@@ -13,6 +14,7 @@ __all__ = [
     "log_debug",
     "log_warn",
     "logfmt",
+    "map_output_dtype",
 ]
 
 api_key_to_header = lambda key: {"Authorization": f"Bearer {key}"}
@@ -84,3 +86,13 @@ def default_api_key() -> str:
             "or set the environment variable VOYAGE_API_KEY_PATH=<PATH>. "
             "API keys can be generated in Voyage AI's dashboard (https://dash.voyageai.com)."
         )
+
+
+def map_output_dtype(dtype: Optional[str] = None) -> str:
+    if not dtype or dtype == "float":
+        return "float32"
+    if dtype == "int8" or dtype == "binary":
+        return "int8"
+    if dtype == "uint8" or dtype == "ubinary":
+        return "uint8"
+    raise ValueError(f"Unknown dtype {dtype}")
