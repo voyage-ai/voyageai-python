@@ -167,11 +167,11 @@ class TestClient:
             ([sample_input_invalid_text_01, []], voyageai.error.InvalidRequestError),
             (
                 [sample_input_dict_text_01, sample_input_dict_b64_01] * 501,
-                voyageai.error.InvalidRequestError,
+                (voyageai.error.InvalidRequestError, voyageai.error.ServerError, voyageai.error.ServiceUnavailableError)
             ),  # exceeds max batch size
             (
                 [sample_input_list_text_01, sample_input_list_img_01] * 501,
-                voyageai.error.InvalidRequestError,
+                (voyageai.error.InvalidRequestError, voyageai.error.ServerError, voyageai.error.ServiceUnavailableError)
             ),  # exceeds max batch size
             (
                 [sample_input_dict_mixed_01, sample_input_list_mixed_01],

@@ -29,7 +29,7 @@ class Embedding(APIResource):
                 # If an engine isn't using this optimization, don't do anything
                 if type(data["embedding"]) == str:
                     data["embedding"] = np.frombuffer(
-                        base64.b64decode(data["embedding"]), dtype=map_output_dtype(kwargs["output_dtype"])
+                        base64.b64decode(data["embedding"]), dtype=map_output_dtype(kwargs.get("output_dtype", "float"))
                     ).tolist()
 
         return response
@@ -54,7 +54,7 @@ class Embedding(APIResource):
                 # If an engine isn't using this optimization, don't do anything
                 if type(data["embedding"]) == str:
                     data["embedding"] = np.frombuffer(
-                        base64.b64decode(data["embedding"]), dtype=map_output_dtype(kwargs["output_dtype"])
+                        base64.b64decode(data["embedding"]), dtype=map_output_dtype(kwargs.get("output_dtype", "float"))
                     ).tolist()
 
         return response
