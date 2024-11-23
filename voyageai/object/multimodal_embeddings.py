@@ -106,8 +106,8 @@ class MultimodalInputRequest(BaseModel):
         """
         multimodal_inputs = []
 
-        if not inputs:
-            raise error.InvalidRequestError("The 'inputs' list cannot be empty.")
+        if not inputs or not isinstance(inputs, list):
+            raise error.InvalidRequestError("'inputs' must be a non-empty list")
 
         first_input = inputs[0]
         if isinstance(first_input, dict):
