@@ -77,6 +77,36 @@ class TestClient:
         with pytest.raises(error.Timeout):
             vo.embed([self.sample_query * 100] * 100, model=self.embed_model)
 
+    def test_client_embed_output_dtype(self):
+        vo = voyageai.Client()
+        result = vo.embed([self.sample_query], model=self.embed_model)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+        assert result.total_tokens > 0
+
+        result = vo.embed([self.sample_query], model=self.embed_model, output_dtype="float", output_dimension=1024)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+
+        conversion_enabled_model = "voyage-code-3"
+
+        result = vo.embed([self.sample_query], model=conversion_enabled_model)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+
+        result = vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="int8", output_dimension=2048)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 2048
+        assert isinstance(result.embeddings[0][0], int)
+
+        result = vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="ubinary", output_dimension=256)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 32
+        assert isinstance(result.embeddings[0][0], int)
+
     """
     Reranker
     """

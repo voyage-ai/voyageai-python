@@ -1,7 +1,12 @@
+import base64
 import logging
 import os
 import re
 import sys
+from typing import Optional, Union, List
+
+import numpy as np
+
 import voyageai
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
@@ -13,6 +18,7 @@ __all__ = [
     "log_debug",
     "log_warn",
     "logfmt",
+    "decode_base64_embedding",
 ]
 
 api_key_to_header = lambda key: {"Authorization": f"Bearer {key}"}
@@ -84,3 +90,23 @@ def default_api_key() -> str:
             "or set the environment variable VOYAGE_API_KEY_PATH=<PATH>. "
             "API keys can be generated in Voyage AI's dashboard (https://dash.voyageai.com)."
         )
+
+
+def _resolve_numpy_dtype(dtype: Optional[str] = None) -> str:
+    dtype_mapping = {
+        None: np.float32,
+        "float": np.float32,
+        "int8": np.int8,
+        "binary": np.int8,
+        "uint8": np.uint8,
+        "ubinary": np.uint8,
+    }
+    try:
+        return dtype_mapping[dtype]
+    except KeyError:
+        raise ValueError(f"Unknown dtype {dtype}")
+
+
+def decode_base64_embedding(embedding: str, dtype: Optional[str] = None) -> Union[List[float], List[int]]:
+    arr = np.frombuffer(base64.b64decode(embedding), _resolve_numpy_dtype(dtype))
+    return arr.tolist()

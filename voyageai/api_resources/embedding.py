@@ -1,7 +1,5 @@
-import base64
-import numpy as np
-
 from voyageai.api_resources import APIResource
+from voyageai.util import decode_base64_embedding
 
 
 class Embedding(APIResource):
@@ -27,9 +25,7 @@ class Embedding(APIResource):
             for data in response.data:
                 # If an engine isn't using this optimization, don't do anything
                 if type(data["embedding"]) == str:
-                    data["embedding"] = np.frombuffer(
-                        base64.b64decode(data["embedding"]), dtype="float32"
-                    ).tolist()
+                    data["embedding"] = decode_base64_embedding(data["embedding"], kwargs.get("output_dtype", None))
 
         return response
 
@@ -52,8 +48,6 @@ class Embedding(APIResource):
             for data in response.data:
                 # If an engine isn't using this optimization, don't do anything
                 if type(data["embedding"]) == str:
-                    data["embedding"] = np.frombuffer(
-                        base64.b64decode(data["embedding"]), dtype="float32"
-                    ).tolist()
+                    data["embedding"] = decode_base64_embedding(data["embedding"], kwargs.get("output_dtype", None))
 
         return response

@@ -170,7 +170,7 @@ class TestClient:
                 voyageai.error.InvalidRequestError,
             ),  # exceeds max batch size
             (
-                [sample_input_list_text_01, sample_input_list_img_01] * 501,
+                [sample_input_list_text_01, sample_input_list_img_04] * 501,
                 voyageai.error.InvalidRequestError,
             ),  # exceeds max batch size
             (
