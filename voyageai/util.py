@@ -1,8 +1,12 @@
+import base64
 import logging
 import os
 import re
 import sys
-from typing import Optional
+from typing import Optional, Union, List
+
+import numpy as np
+
 import voyageai
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
@@ -14,7 +18,7 @@ __all__ = [
     "log_debug",
     "log_warn",
     "logfmt",
-    "map_output_dtype",
+    "decode_base64_embedding",
 ]
 
 api_key_to_header = lambda key: {"Authorization": f"Bearer {key}"}
@@ -88,11 +92,21 @@ def default_api_key() -> str:
         )
 
 
-def map_output_dtype(dtype: Optional[str] = None) -> str:
-    if not dtype or dtype == "float":
-        return "float32"
-    if dtype == "int8" or dtype == "binary":
-        return "int8"
-    if dtype == "uint8" or dtype == "ubinary":
-        return "uint8"
-    raise ValueError(f"Unknown dtype {dtype}")
+def _resolve_numpy_dtype(dtype: Optional[str] = None) -> str:
+    dtype_mapping = {
+        None: np.float32,
+        "float": np.float32,
+        "int8": np.int8,
+        "binary": np.int8,
+        "uint8": np.uint8,
+        "ubinary": np.uint8,
+    }
+    try:
+        return dtype_mapping[dtype]
+    except KeyError:
+        raise ValueError(f"Unknown dtype {dtype}")
+
+
+def decode_base64_embedding(embedding: str, dtype: Optional[str] = None) -> Union[List[float], List[int]]:
+    arr = np.frombuffer(base64.b64decode(embedding), _resolve_numpy_dtype(dtype))
+    return arr.tolist()
