@@ -77,6 +77,11 @@ class TestAsyncClient:
         assert isinstance(result.embeddings[0][0], float)
         assert result.total_tokens > 0
 
+        result = await vo.embed([self.sample_query], model=self.embed_model, output_dtype="float", output_dimension=1024)
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 1024
+        assert isinstance(result.embeddings[0][0], float)
+
         conversion_enabled_model = "voyage-code-3"
 
         result = await vo.embed([self.sample_query], model=conversion_enabled_model)
