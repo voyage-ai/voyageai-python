@@ -49,7 +49,7 @@ class TestClient:
     def test_client_embed_batch_size(self):
         vo = voyageai.Client()
         with pytest.raises(voyageai.error.InvalidRequestError):
-            vo.embed(self.sample_docs * 200, model=self.embed_model)
+            vo.embed(self.sample_docs * 1100, model=self.embed_model)
 
     def test_client_embed_context_length(self):
         vo = voyageai.Client()
