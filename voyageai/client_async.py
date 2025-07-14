@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Optional, Union, Dict
+from typing import Callable, List, Optional, Union, Dict
 
 from PIL.Image import Image
 from tenacity import (
@@ -11,10 +11,12 @@ from tenacity import (
 
 import voyageai
 from voyageai._base import _BaseClient
+from voyageai.chunking import apply_chunking
 import voyageai.error as error
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest
-from voyageai.object import EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
-
+from voyageai.object import (
+    ContextualizedEmbeddingsObject, EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
+)
 
 class AsyncClient(_BaseClient):
     """Voyage AI Async Client
@@ -77,6 +79,35 @@ class AsyncClient(_BaseClient):
 
         result = EmbeddingsObject(response)
         return result
+
+    async def contextualized_embed(
+        self,
+        inputs: List[List[str]],
+        model: str,
+        input_type: Optional[str] = None,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
+        chunk_fn: Optional[Callable[[str], List[str]]] = None,
+    ) -> ContextualizedEmbeddingsObject:
+        
+        async for attempt in self.retry_controller:
+            with attempt:
+                if chunk_fn:
+                    inputs = apply_chunking(inputs, chunk_fn)
+                response = await voyageai.ContextualizedEmbedding.create(
+                    input=inputs,
+                    model=model,
+                    input_type=input_type,
+                    output_dtype=output_dtype,
+                    output_dimension=output_dimension,
+                    **self._params,
+                )
+
+        if chunk_fn:
+            return ContextualizedEmbeddingsObject(
+                response=response, chunk_texts=inputs,
+            )
+        return ContextualizedEmbeddingsObject(response)
 
     async def rerank(
         self,

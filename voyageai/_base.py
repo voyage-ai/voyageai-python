@@ -4,13 +4,14 @@ import json
 from abc import ABC, abstractmethod
 import functools
 import warnings
-from typing import Any, List, Optional, Union, Dict
+from typing import Any, Callable, List, Optional, Union, Dict
 
 from huggingface_hub import hf_hub_download
 import PIL.Image
 
 import voyageai
 import voyageai.error as error
+from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest, MultimodalInputSegmentText, \
     MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64, MultimodalEmbeddingsObject
 from voyageai.util import default_api_key
@@ -67,6 +68,18 @@ class _BaseClient(ABC):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> EmbeddingsObject:
+        pass
+
+    @abstractmethod
+    def contextualized_embed(
+        self,
+        inputs: List[List[str]],
+        model: str,
+        input_type: Optional[str] = None,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
+        chunk_fn: Optional[Callable[[str], List[str]]] = None,
+    ) -> ContextualizedEmbeddingsObject:
         pass
 
     @abstractmethod

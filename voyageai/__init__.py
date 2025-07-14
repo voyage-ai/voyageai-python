@@ -19,7 +19,9 @@ if "pkg_resources" not in sys.modules:
 VOYAGE_EMBED_BATCH_SIZE = 128
 VOYAGE_EMBED_DEFAULT_MODEL = "voyage-2"
 
-from voyageai.api_resources import Embedding, Reranking, MultimodalEmbedding
+from voyageai.api_resources import (
+    ContextualizedEmbedding, Embedding, Reranking, MultimodalEmbedding,
+)
 from voyageai.version import VERSION
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
