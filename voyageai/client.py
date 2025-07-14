@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, List, Optional, Union, Dict
+from typing import Any, Callable, List, Optional, Union, Dict
 from tenacity import (
     Retrying,
     stop_after_attempt,
@@ -10,9 +10,12 @@ from PIL.Image import Image
 
 import voyageai
 from voyageai._base import _BaseClient
+from voyageai.chunking import apply_chunking
 import voyageai.error as error
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest
-from voyageai.object import EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
+from voyageai.object import (
+    ContextualizedEmbeddingsObject, EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
+)
 
 
 class Client(_BaseClient):
@@ -76,6 +79,35 @@ class Client(_BaseClient):
 
         result = EmbeddingsObject(response)
         return result
+
+    def contextualized_embed(
+        self,
+        inputs: List[List[str]],
+        model: str,
+        input_type: Optional[str] = None,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
+        chunk_fn: Optional[Callable[[str], List[str]]] = None,
+    ) -> ContextualizedEmbeddingsObject:
+        
+        for attempt in self.retry_controller:
+            with attempt:
+                if chunk_fn:
+                    inputs = apply_chunking(inputs, chunk_fn)
+                response = voyageai.ContextualizedEmbedding.create(
+                    inputs=inputs,
+                    model=model,
+                    input_type=input_type,
+                    output_dtype=output_dtype,
+                    output_dimension=output_dimension,
+                    **self._params,
+                )
+
+        if chunk_fn:
+            return ContextualizedEmbeddingsObject(
+                response=response, chunk_texts=inputs,
+            )
+        return ContextualizedEmbeddingsObject(response)
 
     def rerank(
         self,
