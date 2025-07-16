@@ -3,7 +3,7 @@ import importlib.metadata
 
 import voyageai
 import voyageai.error as error
-from voyageai.chunking import default_chunking_fn
+from voyageai.chunking import default_chunk_fn
 
 
 class TestClient:
@@ -153,7 +153,7 @@ class TestClient:
         result = vo.contextualized_embed(
             inputs=[[doc], [doc, doc]], 
             model=self.context_embed_model, 
-            chunk_fn=default_chunking_fn(chunk_size=1, chunk_overlap=0),
+            chunk_fn=default_chunk_fn(chunk_size=1, chunk_overlap=0),
         )
         assert len(result.results) == 2
         assert result.total_tokens == len(doc) * 3

@@ -23,6 +23,7 @@ from voyageai.api_resources import (
     ContextualizedEmbedding, Embedding, Reranking, MultimodalEmbedding,
 )
 from voyageai.version import VERSION
+from voyageai.chunking import default_chunk_fn
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
 from voyageai.embeddings_utils import (

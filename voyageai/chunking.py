@@ -6,6 +6,19 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
+SEPARATORS = [
+    "\n\n",
+    "\n",
+    "\uff0e",  # Fullwidth full stop
+    "\u3002",  # Ideographic full stop
+    "\uff0c",  # Fullwidth comma
+    "\u3001",  # Ideographic comma
+    ".",
+    ",",
+    " ",
+    "\u200b",  # Zero-width space
+    "",
+]
 
 def apply_chunking(
     inputs: List[List[str]],
@@ -19,7 +32,7 @@ def apply_chunking(
     ]
 
 
-def default_chunking_fn(
+def default_chunk_fn(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
 ) -> Callable[[str], List[str]]:
@@ -27,6 +40,9 @@ def default_chunking_fn(
     Simple wrapper for LangChain RecursiveCharacterTextSplitter.
     """
     splitter = RecursiveCharacterTextSplitter(
+        separators=SEPARATORS,
+        keep_separator="end",
+        strip_whitespace=False,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
