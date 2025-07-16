@@ -23,18 +23,27 @@ class ContextualizedEmbeddingsObject:
             self.update(response)
 
     def update(self, response: VoyageResponse):
-        if self.chunk_texts and len(response.data) != len(self.chunk_texts):
-            raise error.ServerError("The server failed to process the request.")
-        for i, d in enumerate(response.data):
-            embeddings = [embd.embedding for embd in d.data]
-            if len(self.chunk_texts[i]) != len(embeddings):
+        if self.chunk_texts:
+            if len(response.data) != len(self.chunk_texts):
                 raise error.ServerError("The server failed to process the request.")
-            self.results.append(
-                ContextualizedEmbeddingsResult(
-                    index=i,
-                    embeddings=embeddings,
-                    chunk_texts=self.chunk_texts[i],
+            for i, d in enumerate(response.data):
+                embeddings = [embd.embedding for embd in d.data]
+                if len(self.chunk_texts[i]) != len(embeddings):
+                    raise error.ServerError("The server failed to process the request.")
+                self.results.append(
+                    ContextualizedEmbeddingsResult(
+                        index=i,
+                        embeddings=embeddings,
+                        chunk_texts=self.chunk_texts[i],
+                    )
                 )
-            )
-            self.embeddings.append(d.embedding)
+        else:
+            for i, d in enumerate(response.data):
+                embeddings = [embd.embedding for embd in d.data]
+                self.results.append(
+                    ContextualizedEmbeddingsResult(
+                        index=i,
+                        embeddings=embeddings,
+                    )
+                )
         self.total_tokens += response.usage.total_tokens

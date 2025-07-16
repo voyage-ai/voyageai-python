@@ -3,7 +3,7 @@ import importlib.metadata
 
 import voyageai
 import voyageai.error as error
-from voyageai.chunking import default_text_splitter
+from voyageai.chunking import default_chunking_fn
 
 
 class TestClient:
@@ -20,8 +20,8 @@ class TestClient:
     ]
     sample_chunked_query = [[sample_query]]
     sample_chunked_docs =[
-        ["doc 1 chunk 1"],
-        ["doc 2 chunk 1", "doc 2 chunk 2"],
+        ["This is doc 1 chunk 1."],
+        ["This is doc 2 chunk 1.", "This is doc 2 chunk 2."],
     ]
 
     """
@@ -117,7 +117,7 @@ class TestClient:
     """
     Contextualized embeddings
     """
-    def test_contextualized_embeddings(self):
+    def test_client_contextualized_embed(self):
         vo = voyageai.Client()
         result = vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)
         assert len(result.results) == 1
@@ -146,6 +146,71 @@ class TestClient:
         assert len(query_embd) == 1024
         assert len(doc_embd) == 1024
         assert query_embd[0] != doc_embd[0]
+
+    def test_client_contextualized_embed_with_chunking_fn(self):
+        vo = voyageai.Client()
+        doc = "I am an unchunked document"
+        result = vo.contextualized_embed(
+            inputs=[[doc], [doc, doc]], 
+            model=self.context_embed_model, 
+            chunk_fn=default_chunking_fn(chunk_size=1, chunk_overlap=0),
+        )
+        assert len(result.results) == 2
+        assert result.total_tokens == len(doc) * 3
+        assert result.chunk_texts is not None
+        assert len(result.chunk_texts) == 2
+        assert len(result.chunk_texts[0]) == len(doc)
+        assert len(result.chunk_texts[1]) == len(doc) * 2
+
+    def test_client_contextualized_embed_batch_size(self):
+        vo = voyageai.Client()
+        with pytest.raises(voyageai.error.InvalidRequestError):
+            vo.contextualized_embed(inputs=self.sample_chunked_docs * 1100, model=self.context_embed_model)
+
+    def test_client_contextualized_embed_context_length(self):
+        vo = voyageai.Client()
+        texts = self.sample_chunked_docs + self.sample_chunked_query * 998
+
+        result = vo.contextualized_embed(inputs=texts, model=self.context_embed_model)
+        assert result.total_tokens <= 6015
+
+    def test_client_contextualized_embed_invalid_request(self):
+        vo = voyageai.Client()
+        with pytest.raises(error.InvalidRequestError):
+            vo.contextualized_embed(inputs=self.sample_chunked_query, model="wrong-model-name")
+
+    def test_client_contextualized_embed_timeout(self):
+        vo = voyageai.Client(timeout=1, max_retries=1)
+        with pytest.raises(error.Timeout):
+            vo.contextualized_embed(inputs=[[self.sample_query] * 100] * 100, model=self.context_embed_model)
+
+    def test_client_contextualized_embed_output_dtype(self):
+        vo = voyageai.Client()
+        result = vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)
+        assert len(result.results) == 1
+        assert len(result.results[0].embeddings) == 1
+        assert len(result.results[0].embeddings[0]) == 1024
+        assert isinstance(result.results[0].embeddings[0][0], float)
+        assert result.total_tokens > 0
+
+        result = vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="float", output_dimension=1024)
+        assert len(result.results) == 1
+        assert len(result.results[0].embeddings) == 1
+        assert len(result.results[0].embeddings[0]) == 1024
+        assert isinstance(result.results[0].embeddings[0][0], float)
+
+        result = vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="int8", output_dimension=2048)
+        assert len(result.results) == 1
+        assert len(result.results[0].embeddings) == 1
+        assert len(result.results[0].embeddings[0]) == 2048
+        assert isinstance(result.results[0].embeddings[0][0], int)
+
+        result = vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="ubinary", output_dimension=256)
+        assert len(result.results) == 1
+        assert len(result.results[0].embeddings) == 1
+        assert len(result.results[0].embeddings[0]) == 32
+        assert isinstance(result.results[0].embeddings[0][0], int)
+
 
     """
     Reranker

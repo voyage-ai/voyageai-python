@@ -11,10 +11,15 @@ def apply_chunking(
     inputs: List[List[str]],
     chunk_fn: Callable[[str], List[str]],
 ) -> List[List[str]]:
-    return [list(chain.from_iterable(chunk_fn(i) for i in input)) for input in inputs]
+    """
+    Apply chunk_fn to each string in a nested list of inputs and flatten the results
+    """
+    return [
+        list(chain.from_iterable(chunk_fn(i) for i in input)) for input in inputs
+    ]
 
 
-def default_text_splitter(
+def default_chunking_fn(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
 ) -> Callable[[str], List[str]]:
@@ -26,6 +31,6 @@ def default_text_splitter(
         chunk_overlap=chunk_overlap,
     )
     def split(text: str) -> List[str]:
-        chunks = splitter.create_chunks([text])
+        chunks = splitter.create_documents([text])
         return [chunk.page_content for chunk in chunks]
     return split

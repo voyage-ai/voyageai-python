@@ -95,7 +95,7 @@ class Client(_BaseClient):
                 if chunk_fn:
                     inputs = apply_chunking(inputs, chunk_fn)
                 response = voyageai.ContextualizedEmbedding.create(
-                    input=inputs,
+                    inputs=inputs,
                     model=model,
                     input_type=input_type,
                     output_dtype=output_dtype,

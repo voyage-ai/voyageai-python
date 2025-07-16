@@ -94,8 +94,8 @@ class AsyncClient(_BaseClient):
             with attempt:
                 if chunk_fn:
                     inputs = apply_chunking(inputs, chunk_fn)
-                response = await voyageai.ContextualizedEmbedding.create(
-                    input=inputs,
+                response = await voyageai.ContextualizedEmbedding.acreate(
+                    inputs=inputs,
                     model=model,
                     input_type=input_type,
                     output_dtype=output_dtype,
