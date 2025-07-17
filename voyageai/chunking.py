@@ -4,8 +4,7 @@ from typing import Callable, List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 200
+DEFAULT_CHUNK_SIZE = 2048
 SEPARATORS = [
     "\n\n",
     "\n",
@@ -32,10 +31,7 @@ def apply_chunking(
     ]
 
 
-def default_chunk_fn(
-    chunk_size: int = DEFAULT_CHUNK_SIZE,
-    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
-) -> Callable[[str], List[str]]:
+def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE,) -> Callable[[str], List[str]]:
     """ 
     Simple wrapper for LangChain RecursiveCharacterTextSplitter.
     """
@@ -44,7 +40,7 @@ def default_chunk_fn(
         keep_separator="end",
         strip_whitespace=False,
         chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
+        chunk_overlap=0,
     )
     def split(text: str) -> List[str]:
         chunks = splitter.create_documents([text])
