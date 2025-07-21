@@ -109,6 +109,7 @@ class TestAsyncClient:
     """
     Contextualized embeddings
     """
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed(self):
         vo = voyageai.AsyncClient()
         result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)
@@ -127,6 +128,7 @@ class TestAsyncClient:
         assert len(result.results[1].embeddings[1]) == 1024
         assert result.total_tokens > 0
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_input_type(self):
         vo = voyageai.AsyncClient()
         query_result = await vo.contextualized_embed(
@@ -141,6 +143,7 @@ class TestAsyncClient:
         assert len(doc_embd) == 1024
         assert query_embd[0] != doc_embd[0]
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_with_chunking_fn(self):
         vo = voyageai.AsyncClient()
         doc = "I am an unchunked document"
@@ -156,11 +159,13 @@ class TestAsyncClient:
         assert len(result.chunk_texts[0]) == len(doc)
         assert len(result.chunk_texts[1]) == len(doc) * 2
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_batch_size(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(voyageai.error.InvalidRequestError):
             await vo.contextualized_embed(inputs=self.sample_chunked_docs * 1100, model=self.context_embed_model)
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_context_length(self):
         vo = voyageai.AsyncClient()
         texts = self.sample_chunked_docs + self.sample_chunked_query * 998
@@ -168,16 +173,19 @@ class TestAsyncClient:
         result = await vo.contextualized_embed(inputs=texts, model=self.context_embed_model)
         assert result.total_tokens <= 6015
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_invalid_request(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(error.InvalidRequestError):
             await vo.contextualized_embed(inputs=self.sample_chunked_query, model="wrong-model-name")
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_timeout(self):
         vo = voyageai.AsyncClient(timeout=1, max_retries=1)
         with pytest.raises(error.Timeout):
             await vo.contextualized_embed(inputs=[[self.sample_query] * 100] * 100, model=self.context_embed_model)
 
+    @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_output_dtype(self):
         vo = voyageai.AsyncClient()
         result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)

@@ -23,13 +23,9 @@ class ContextualizedEmbeddingsObject:
             self.update(response)
 
     def update(self, response: VoyageResponse):
-        if self.chunk_texts:
-            if len(response.data) != len(self.chunk_texts):
-                raise error.ServerError("The server failed to process the request.")
-            for i, d in enumerate(response.data):
-                embeddings = [embd.embedding for embd in d.data]
-                if len(self.chunk_texts[i]) != len(embeddings):
-                    raise error.ServerError("The server failed to process the request.")
+        for i, d in enumerate(response.data):
+            embeddings = [embd.embedding for embd in d.data]
+            if self.chunk_texts:
                 self.results.append(
                     ContextualizedEmbeddingsResult(
                         index=i,
@@ -37,9 +33,7 @@ class ContextualizedEmbeddingsObject:
                         chunk_texts=self.chunk_texts[i],
                     )
                 )
-        else:
-            for i, d in enumerate(response.data):
-                embeddings = [embd.embedding for embd in d.data]
+            else:
                 self.results.append(
                     ContextualizedEmbeddingsResult(
                         index=i,
