@@ -1,5 +1,7 @@
+from typing import List
 import pytest
 import importlib.metadata
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 import voyageai
 import voyageai.error as error
@@ -124,6 +126,7 @@ class TestClient:
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 1024
         assert result.total_tokens > 0
+        assert result.chunk_texts is None
 
         result = vo.contextualized_embed(
             inputs=self.sample_chunked_docs, model=self.context_embed_model)
@@ -134,6 +137,7 @@ class TestClient:
         assert len(result.results[1].embeddings[0]) == 1024
         assert len(result.results[1].embeddings[1]) == 1024
         assert result.total_tokens > 0
+        assert result.chunk_texts is None
 
     def test_client_contextualized_embed_input_type(self):
         vo = voyageai.Client()
@@ -161,6 +165,35 @@ class TestClient:
         assert len(result.chunk_texts) == 2
         assert len(result.chunk_texts[0]) == len(doc)
         assert len(result.chunk_texts[1]) == len(doc) * 2
+
+    def test_client_contextualized_embed_custom_chunking_fn(self):
+        vo = voyageai.Client()
+        doc = """
+            Voyage AI provides cutting-edge embedding and rerankers.\n
+            Embedding models are neural net models (e.g., transformers) that convert unstructured and complex data, such as documents, images, audios, videos, or tabular data, into dense numerical vectors (i.e. embeddings) that capture their semantic meanings.\n
+            These vectors serve as representations/indices for datapoints and are essential building blocks for semantic search and retrieval-augmented generation (RAG), which is the predominant approach for domain-specific or company-specific chatbots and other AI applications.
+        """
+        text_splitter = RecursiveCharacterTextSplitter(
+            separators=["\n"], chunk_size=300, chunk_overlap=0
+        )
+        def newline_chunk_fn(text: str) -> List[str]:
+            chunks = text_splitter.create_documents([text])
+            return [chunk.page_content for chunk in chunks]
+        
+        result = vo.contextualized_embed(
+            inputs=[[doc]], 
+            model=self.context_embed_model, 
+            chunk_fn=newline_chunk_fn,
+        )
+        assert len(result.results) == 1
+        assert len(result.results[0].embeddings) == 3
+        assert result.total_tokens >= 0
+        assert result.chunk_texts is not None
+        assert len(result.chunk_texts) == 1
+        assert len(result.chunk_texts[0]) == 3
+        assert len(result.chunk_texts[0][0]) == 56
+        assert len(result.chunk_texts[0][1]) == 248
+        assert len(result.chunk_texts[0][2]) == 267
 
     def test_client_contextualized_embed_batch_size(self):
         vo = voyageai.Client()
