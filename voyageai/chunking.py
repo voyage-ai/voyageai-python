@@ -31,7 +31,7 @@ def apply_chunking(
     ]
 
 
-def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE,) -> Callable[[str], List[str]]:
+def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE) -> Callable[[str], List[str]]:
     """ 
     Simple wrapper for LangChain RecursiveCharacterTextSplitter.
     """
