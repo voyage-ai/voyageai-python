@@ -79,7 +79,7 @@ sample_input_dict_url_01 = {
     "content": [
         {
             "type": "image_url",
-            "image_url": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Drascombe_Lugger_sailboat_3912.jpg",
+            "image_url": "https://www.voyageai.com/feature.png",
         },
     ],
 }
@@ -98,7 +98,7 @@ sample_input_dict_mixed_01 = {
         {"type": "text", "text": "this is an image of a blue sailboat on a lake."},
         {
             "type": "image_url",
-            "image_url": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Drascombe_Lugger_sailboat_3912.jpg",
+            "image_url": "https://www.voyageai.com/feature.png",
         },
     ],
 }
