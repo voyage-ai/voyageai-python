@@ -65,6 +65,7 @@ class AsyncClient(_BaseClient):
                 "provided by Voyage AI."
             )
 
+        response = None
         async for attempt in self.retry_controller:
             with attempt:
                 response = await voyageai.Embedding.acreate(
@@ -76,6 +77,9 @@ class AsyncClient(_BaseClient):
                     output_dimension=output_dimension,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = EmbeddingsObject(response)
         return result
@@ -90,6 +94,7 @@ class AsyncClient(_BaseClient):
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
     ) -> ContextualizedEmbeddingsObject:
         
+        response = None
         async for attempt in self.retry_controller:
             with attempt:
                 if chunk_fn:
@@ -102,6 +107,9 @@ class AsyncClient(_BaseClient):
                     output_dimension=output_dimension,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
@@ -118,6 +126,7 @@ class AsyncClient(_BaseClient):
         truncation: bool = True,
     ) -> RerankingObject:
 
+        response = None
         async for attempt in self.retry_controller:
             with attempt:
                 response = await voyageai.Reranking.acreate(
@@ -128,6 +137,9 @@ class AsyncClient(_BaseClient):
                     truncation=truncation,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = RerankingObject(documents, response)
         return result
@@ -149,6 +161,7 @@ class AsyncClient(_BaseClient):
         :return: An instance of MultimodalEmbeddingsObject.
         """
 
+        response = None
         async for attempt in self.retry_controller:
             with attempt:
                 response = await voyageai.MultimodalEmbedding.acreate(
@@ -160,6 +173,9 @@ class AsyncClient(_BaseClient):
                     ).dict(),
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = MultimodalEmbeddingsObject(response)
         return result
