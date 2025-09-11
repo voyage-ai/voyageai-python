@@ -65,6 +65,7 @@ class Client(_BaseClient):
                 "provided by Voyage AI."
             )
 
+        response = None
         for attempt in self.retry_controller:
             with attempt:
                 response = voyageai.Embedding.create(
@@ -76,6 +77,9 @@ class Client(_BaseClient):
                     output_dimension=output_dimension,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = EmbeddingsObject(response)
         return result
@@ -90,6 +94,7 @@ class Client(_BaseClient):
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
     ) -> ContextualizedEmbeddingsObject:
         
+        response = None
         for attempt in self.retry_controller:
             with attempt:
                 if chunk_fn:
@@ -102,6 +107,9 @@ class Client(_BaseClient):
                     output_dimension=output_dimension,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
@@ -118,6 +126,7 @@ class Client(_BaseClient):
         truncation: bool = True,
     ) -> RerankingObject:
 
+        response = None
         for attempt in self.retry_controller:
             with attempt:
                 response = voyageai.Reranking.create(
@@ -128,6 +137,9 @@ class Client(_BaseClient):
                     truncation=truncation,
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = RerankingObject(documents, response)
         return result
@@ -148,6 +160,7 @@ class Client(_BaseClient):
         :param truncation: Whether to apply truncation.
         :return: An instance of MultimodalEmbeddingsObject.
         """
+        response = None
         for attempt in self.retry_controller:
             with attempt:
                 response = voyageai.MultimodalEmbedding.create(
@@ -159,6 +172,9 @@ class Client(_BaseClient):
                     ).dict(),
                     **self._params,
                 )
+
+        if response is None:
+            raise error.APIConnectionError("Failed to get response after all retry attempts")
 
         result = MultimodalEmbeddingsObject(response)
         return result
