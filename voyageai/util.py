@@ -91,6 +91,15 @@ def default_api_key() -> str:
             "API keys can be generated in Voyage AI's dashboard (https://dash.voyageai.com)."
         )
 
+def get_api_endpoint(api_key: str) -> str:
+    ep = os.environ.get("VOYAGE_API_ENDPOINT")
+    if ep:
+        return ep
+    elif api_key.startswith('al-'):
+        return "https://ai.mongodb.com/v1"
+    else:
+        return "https://api.voyageai.com/v1"
+
 
 def _resolve_numpy_dtype(dtype: Optional[str] = None) -> str:
     dtype_mapping = {

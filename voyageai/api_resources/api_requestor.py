@@ -120,8 +120,9 @@ class APIRequestor:
         key=None,
         api_base=None,
     ):
-        self.api_base = api_base or voyageai.api_base
         self.api_key = key or util.default_api_key()
+        self.api_base = api_base or util.get_api_endpoint(self.api_key)
+
 
     def request(
         self,
