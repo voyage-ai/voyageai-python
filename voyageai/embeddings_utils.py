@@ -1,18 +1,18 @@
 import asyncio
-from aiolimiter import AsyncLimiter
 import warnings
-from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import AsyncExitStack
+from typing import List, Optional
+
+from aiolimiter import AsyncLimiter
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
-    retry_if_exception_type,
 )
-from concurrent.futures import ThreadPoolExecutor
 
 import voyageai
-
 
 MAX_BATCH_SIZE = voyageai.VOYAGE_EMBED_BATCH_SIZE
 MAX_LIST_LENGTH = voyageai.VOYAGE_EMBED_BATCH_SIZE
@@ -66,9 +66,7 @@ async def _aget_embeddings(
     async with semaphore:
         async with rate_limit:
             data = (
-                await voyageai.Embedding.acreate(
-                    input=list_of_text, model=model, **kwargs
-                )
+                await voyageai.Embedding.acreate(input=list_of_text, model=model, **kwargs)
             ).data
 
     return [d["embedding"] for d in data]
@@ -76,9 +74,7 @@ async def _aget_embeddings(
 
 def _check_input_type(input_type: Optional[str]):
     if input_type and input_type not in ["query", "document"]:
-        raise ValueError(
-            f"input_type {input_type} is invalid. Options: None, 'query', 'document'."
-        )
+        raise ValueError(f"input_type {input_type} is invalid. Options: None, 'query', 'document'.")
 
 
 def get_embedding(
@@ -126,15 +122,11 @@ def get_embeddings(
     ), f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
 
     batches = [
-        list_of_text[i : i + MAX_BATCH_SIZE]
-        for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
+        list_of_text[i : i + MAX_BATCH_SIZE] for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
     ]
 
     with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCE) as executor:
-        futures = [
-            executor.submit(_get_embeddings, batch, model, input_type)
-            for batch in batches
-        ]
+        futures = [executor.submit(_get_embeddings, batch, model, input_type) for batch in batches]
 
     results = [future.result() for future in futures]
     return sum(results, [])
@@ -188,13 +180,10 @@ async def aget_embeddings(
     rate_limit = AsyncLimiter(DEFAULT_RPM, 60)
 
     batches = [
-        list_of_text[i : i + MAX_BATCH_SIZE]
-        for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
+        list_of_text[i : i + MAX_BATCH_SIZE] for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
     ]
     async_tasks = [
-        _aget_embeddings(
-            batch, model, input_type, semaphore=semaphore, rate_limit=rate_limit
-        )
+        _aget_embeddings(batch, model, input_type, semaphore=semaphore, rate_limit=rate_limit)
         for batch in batches
     ]
     results = await asyncio.gather(*async_tasks)

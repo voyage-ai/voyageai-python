@@ -1,22 +1,26 @@
 import warnings
-from typing import Callable, List, Optional, Union, Dict
+from typing import Callable, Dict, List, Optional, Union
 
 from PIL.Image import Image
 from tenacity import (
     AsyncRetrying,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
-    retry_if_exception_type,
 )
 
 import voyageai
+import voyageai.error as error
 from voyageai._base import _BaseClient
 from voyageai.chunking import apply_chunking
-import voyageai.error as error
-from voyageai.object.multimodal_embeddings import MultimodalInputRequest
 from voyageai.object import (
-    ContextualizedEmbeddingsObject, EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
+    ContextualizedEmbeddingsObject,
+    EmbeddingsObject,
+    MultimodalEmbeddingsObject,
+    RerankingObject,
 )
+from voyageai.object.multimodal_embeddings import MultimodalInputRequest
+
 
 class AsyncClient(_BaseClient):
     """Voyage AI Async Client
@@ -48,7 +52,6 @@ class AsyncClient(_BaseClient):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> EmbeddingsObject:
-
         if model is None:
             model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
             warnings.warn(
@@ -86,7 +89,6 @@ class AsyncClient(_BaseClient):
         output_dimension: Optional[int] = None,
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
     ) -> ContextualizedEmbeddingsObject:
-        
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -106,7 +108,8 @@ class AsyncClient(_BaseClient):
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
-                response=response, chunk_texts=inputs,
+                response=response,
+                chunk_texts=inputs,
             )
         return ContextualizedEmbeddingsObject(response)
 
@@ -118,7 +121,6 @@ class AsyncClient(_BaseClient):
         top_k: Optional[int] = None,
         truncation: bool = True,
     ) -> RerankingObject:
-
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:

@@ -1,13 +1,12 @@
 import asyncio
+import math
 from inspect import iscoroutinefunction
 from typing import List
 
 import pytest
-from PIL import Image
-
 import voyageai
 import voyageai.error as error
-import math
+from PIL import Image
 
 
 def cosine_similarity(a: List[float], b: List[float]) -> float:
@@ -177,10 +176,7 @@ class TestClient:
                 [sample_input_dict_mixed_01, sample_input_list_mixed_01],
                 voyageai.error.InvalidRequestError,
             ),  # no mixing dict and list
-            (
-                {},
-                voyageai.error.InvalidRequestError
-            ), # inputs is not a list
+            ({}, voyageai.error.InvalidRequestError),  # inputs is not a list
         ],
     )
     def test_client_multimodal_embed_raises_exception(
@@ -236,9 +232,7 @@ class TestClient:
 
         inputs = [long_input]
         with pytest.raises(voyageai.error.InvalidRequestError):
-            embed_with_client(
-                client, inputs=inputs, model=multimodal_model, truncation=False
-            )
+            embed_with_client(client, inputs=inputs, model=multimodal_model, truncation=False)
 
         truncated_result = embed_with_client(
             client, inputs=inputs, model=multimodal_model, truncation=True
@@ -249,9 +243,7 @@ class TestClient:
 
     def test_client_embed_invalid_request(self, client, multimodal_model):
         with pytest.raises(error.InvalidRequestError):
-            embed_with_client(
-                client, inputs=[sample_input_list_mixed_01], model="wrong-model-name"
-            )
+            embed_with_client(client, inputs=[sample_input_list_mixed_01], model="wrong-model-name")
 
         with pytest.raises(error.InvalidRequestError):
             embed_with_client(
@@ -270,16 +262,16 @@ class TestClient:
             )
 
         with pytest.raises(error.InvalidRequestError):
-            embed_with_client(
-                client, inputs=[], model=multimodal_model, truncation="test"
-            )
+            embed_with_client(client, inputs=[], model=multimodal_model, truncation="test")
 
-    def test_input_formats_yield_identical_result(self, client, multimodal_model, similarity_threshold):
+    def test_input_formats_yield_identical_result(
+        self, client, multimodal_model, similarity_threshold
+    ):
         input_1 = {
             "content": [
                 {
                     "type": "image_url",
-                    "image_url": "https://github.com/voyage-ai/voyageai-python/blob/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg?raw=true"
+                    "image_url": "https://github.com/voyage-ai/voyageai-python/blob/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg?raw=true",
                 },
             ],
         }
@@ -312,7 +304,10 @@ class TestClient:
             ([sample_input_list_text_01, sample_input_list_text_01], (26, 0, 26)),
             ([sample_input_list_text_01 * 2] * 2, (50, 0, 50)),
             ([sample_input_list_mixed_01, sample_input_list_mixed_01], (26, 320000, 596)),
-            ([sample_input_list_img_04, sample_input_list_img_05, sample_input_list_text_01], (13, 2050000, 3673)),
+            (
+                [sample_input_list_img_04, sample_input_list_img_05, sample_input_list_text_01],
+                (13, 2050000, 3673),
+            ),
             ([], -1),
             ([sample_input_list_text_01, []], -1),
             ([sample_input_dict_url_01], -1),
@@ -322,15 +317,11 @@ class TestClient:
     )
     def test_client_count_usage(self, client, inputs, expected_count, multimodal_model):
         if isinstance(expected_count, tuple):
-            estimated_usage = client.count_usage(
-                inputs=inputs, model=multimodal_model
-            )
+            estimated_usage = client.count_usage(inputs=inputs, model=multimodal_model)
             assert estimated_usage["text_tokens"] == expected_count[0]
             assert estimated_usage["image_pixels"] == expected_count[1]
             assert estimated_usage["total_tokens"] == expected_count[2]
 
         else:
             with pytest.raises(voyageai.error.InvalidRequestError):
-                client.count_usage(
-                    inputs=inputs, model=multimodal_model
-                )
+                client.count_usage(inputs=inputs, model=multimodal_model)
