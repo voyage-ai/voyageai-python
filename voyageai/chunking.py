@@ -1,8 +1,6 @@
 from itertools import chain
 from typing import Callable, List
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 
 DEFAULT_CHUNK_SIZE = 2048
 SEPARATORS = [
@@ -35,6 +33,14 @@ def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE) -> Callable[[str], Li
     """ 
     Simple wrapper for LangChain RecursiveCharacterTextSplitter.
     """
+    try:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+    except ImportError:
+        raise ImportError(
+            "Please install langchain-text-splitters to use the default chunking function: "
+            "pip install langchain-text-splitters"
+        )
+
     splitter = RecursiveCharacterTextSplitter(
         separators=SEPARATORS,
         keep_separator="end",
