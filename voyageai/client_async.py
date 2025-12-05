@@ -145,7 +145,6 @@ class AsyncClient(_BaseClient):
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
-        call_id: Optional[str] = None,
     ) -> MultimodalEmbeddingsObject:
         """
         Generate multimodal embeddings asynchronously for the provided inputs using the specified model.
