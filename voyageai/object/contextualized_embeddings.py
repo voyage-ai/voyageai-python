@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Union
+
 from voyageai.api_resources import VoyageResponse
-from voyageai import error
+
 
 @dataclass
 class ContextualizedEmbeddingsResult:
@@ -12,7 +13,7 @@ class ContextualizedEmbeddingsResult:
 
 class ContextualizedEmbeddingsObject:
     def __init__(
-        self, 
+        self,
         response: Optional[VoyageResponse] = None,
         chunk_texts: Optional[List[List[str]]] = None,
     ):

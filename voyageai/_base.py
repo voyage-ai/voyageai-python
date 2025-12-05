@@ -1,25 +1,29 @@
 import base64
+import functools
 import io
 import json
-from abc import ABC, abstractmethod
-import functools
 import warnings
-from typing import Any, Callable, List, Optional, Union, Dict
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from huggingface_hub import hf_hub_download
 import PIL.Image
+from huggingface_hub import hf_hub_download
 
 import voyageai
-import voyageai.error as error
-from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
-from voyageai.object.multimodal_embeddings import MultimodalInputRequest, MultimodalInputSegmentText, \
-    MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64, MultimodalEmbeddingsObject
-from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
+from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
+from voyageai.object.multimodal_embeddings import (
+    MultimodalEmbeddingsObject,
+    MultimodalInputRequest,
+    MultimodalInputSegmentImageBase64,
+    MultimodalInputSegmentImageURL,
+    MultimodalInputSegmentText,
+)
+from voyageai.util import default_api_key
 
 
 def _get_client_config(
-        model: str,
+    model: str,
 ) -> dict:
     try:
         config_path = hf_hub_download(repo_id=f"voyageai/{model}", filename="client_config.json")
@@ -50,7 +54,6 @@ class _BaseClient(ABC):
         max_retries: int = 0,
         timeout: Optional[float] = None,
     ) -> None:
-
         self.api_key = api_key or default_api_key()
         self.max_retries = max_retries
 
@@ -59,7 +62,7 @@ class _BaseClient(ABC):
             "request_timeout": timeout,
         }
 
-    @abstractmethod    
+    @abstractmethod
     def embed(
         self,
         texts: List[str],
@@ -122,7 +125,7 @@ class _BaseClient(ABC):
                 f"Failed to load the tokenizer for `{model}`. Please ensure that it is a valid model name."
             )
             raise
-        
+
         return tokenizer
 
     def tokenize(
@@ -130,7 +133,6 @@ class _BaseClient(ABC):
         texts: List[str],
         model: Optional[str] = None,
     ) -> List[Any]:
-
         if model is None:
             warnings.warn(
                 "Please specify the `model` when using the tokenizer. Voyage's older models use the same "
@@ -188,7 +190,9 @@ class _BaseClient(ABC):
 
             for segment in item.content:
                 if isinstance(segment, MultimodalInputSegmentImageURL):
-                    raise voyageai.error.InvalidRequestError("count_usage does not support image URL segments.")
+                    raise voyageai.error.InvalidRequestError(
+                        "count_usage does not support image URL segments."
+                    )
 
                 elif isinstance(segment, MultimodalInputSegmentImageBase64):
                     try:
@@ -196,14 +200,15 @@ class _BaseClient(ABC):
                         image_data = base64.b64decode(image_str)
                         image = PIL.Image.open(io.BytesIO(image_data))
                         this_image_pixels = max(
-                            min_pixels,
-                            min(max_pixels, image.height * image.width)
+                            min_pixels, min(max_pixels, image.height * image.width)
                         )
                         image_pixels += this_image_pixels
                         image_tokens += this_image_pixels // pixel_to_token_ratio
 
                     except Exception as e:
-                        raise voyageai.error.InvalidRequestError(f"Unable to process base64 image: {e}")
+                        raise voyageai.error.InvalidRequestError(
+                            f"Unable to process base64 image: {e}"
+                        )
 
                 elif isinstance(segment, MultimodalInputSegmentText):
                     text_segments += segment.text

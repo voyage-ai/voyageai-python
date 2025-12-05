@@ -2,7 +2,6 @@ from voyageai.api_resources import APIResource
 
 
 class Reranking(APIResource):
-
     OBJECT_NAME = "rerank"
 
     @classmethod
