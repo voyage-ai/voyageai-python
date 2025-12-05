@@ -35,9 +35,10 @@ class Client(_BaseClient):
     ) ->None:
         super().__init__(api_key, max_retries, timeout)
 
-        self.retry_controller = Retrying(
+    def _make_retry_controller(self) -> Retrying:
+        return Retrying(
             reraise=True,
-            stop=stop_after_attempt(max_retries),
+            stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential_jitter(initial=1, max=16),
             retry=(
                 retry_if_exception_type(error.RateLimitError)
@@ -66,7 +67,7 @@ class Client(_BaseClient):
             )
 
         response = None
-        for attempt in self.retry_controller:
+        for attempt in self._make_retry_controller():
             with attempt:
                 response = voyageai.Embedding.create(
                     input=texts,
@@ -95,7 +96,7 @@ class Client(_BaseClient):
     ) -> ContextualizedEmbeddingsObject:
         
         response = None
-        for attempt in self.retry_controller:
+        for attempt in self._make_retry_controller():
             with attempt:
                 if chunk_fn:
                     inputs = apply_chunking(inputs, chunk_fn)
@@ -127,7 +128,7 @@ class Client(_BaseClient):
     ) -> RerankingObject:
 
         response = None
-        for attempt in self.retry_controller:
+        for attempt in self._make_retry_controller():
             with attempt:
                 response = voyageai.Reranking.create(
                     query=query,
@@ -161,7 +162,7 @@ class Client(_BaseClient):
         :return: An instance of MultimodalEmbeddingsObject.
         """
         response = None
-        for attempt in self.retry_controller:
+        for attempt in self._make_retry_controller():
             with attempt:
                 response = voyageai.MultimodalEmbedding.create(
                     **MultimodalInputRequest.from_user_inputs(

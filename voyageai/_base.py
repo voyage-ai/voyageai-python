@@ -52,6 +52,7 @@ class _BaseClient(ABC):
     ) -> None:
 
         self.api_key = api_key or default_api_key()
+        self.max_retries = max_retries
 
         self._params = {
             "api_key": self.api_key,
