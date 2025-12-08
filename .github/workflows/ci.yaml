@@ -30,6 +30,14 @@ jobs:
         python3 -m venv $POETRY_HOME
         $POETRY_HOME/bin/pip install poetry==1.8.4
         $POETRY_HOME/bin/poetry --version
+    - name: Install ffmpeg 7
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        ffmpeg -version
     - name: Install package
       run: $POETRY_HOME/bin/poetry install
     - name: Run tests

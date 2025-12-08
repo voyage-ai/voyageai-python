@@ -19,6 +19,7 @@ __all__ = [
     "log_warn",
     "logfmt",
     "decode_base64_embedding",
+    "default_api_key",
 ]
 
 

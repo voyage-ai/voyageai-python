@@ -18,8 +18,11 @@ from voyageai.object.multimodal_embeddings import (
     MultimodalInputSegmentImageBase64,
     MultimodalInputSegmentImageURL,
     MultimodalInputSegmentText,
+    MultimodalInputSegmentVideoBase64,
+    MultimodalInputSegmentVideoURL,
 )
 from voyageai.util import default_api_key
+from voyageai.video_utils import Video
 
 
 def _get_client_config(
@@ -159,7 +162,7 @@ class _BaseClient(ABC):
     ) -> Dict[str, int]:
         """
         This method returns estimated usage metrics for the provided input.
-        Currently, only multimodal models are supported. Image URL segments are not supported.
+        Currently, only multimodal models are supported. Image and video URL segments are not supported.
 
         Args:
             inputs (list): a list of inputs
@@ -170,6 +173,7 @@ class _BaseClient(ABC):
             - for multimodal models:
               - "text_tokens": the number of tokens represented by the text in the items in the input
               - "image_pixels": the number of pixels represented by the images in the items in the input
+              - "video_pixels": the number of pixels represented by the videos in the items in the input
               - "total_tokens": the total number of tokens represented by the items in the input
         """
         client_config = _get_client_config(model)
@@ -184,6 +188,7 @@ class _BaseClient(ABC):
         )
 
         image_tokens, image_pixels, text_tokens = 0, 0, 0
+        video_tokens, video_pixels = 0, 0
 
         for item in request.inputs:
             text_segments = ""
@@ -192,6 +197,11 @@ class _BaseClient(ABC):
                 if isinstance(segment, MultimodalInputSegmentImageURL):
                     raise voyageai.error.InvalidRequestError(
                         "count_usage does not support image URL segments."
+                    )
+
+                elif isinstance(segment, MultimodalInputSegmentVideoURL):
+                    raise voyageai.error.InvalidRequestError(
+                        "count_usage does not support video URL segments."
                     )
 
                 elif isinstance(segment, MultimodalInputSegmentImageBase64):
@@ -210,6 +220,19 @@ class _BaseClient(ABC):
                             f"Unable to process base64 image: {e}"
                         )
 
+                elif isinstance(segment, MultimodalInputSegmentVideoBase64):
+                    try:
+                        video_str = segment.video_base64.split(",")[1]
+                        video_data = base64.b64decode(video_str)
+                        video = Video.from_file(io.BytesIO(video_data), model=model, optimize=False)
+                        video_pixels += video.num_pixels
+                        video_tokens += video.estimated_num_tokens
+
+                    except Exception as e:
+                        raise voyageai.error.InvalidRequestError(
+                            f"Unable to process base64 video: {e}"
+                        )
+
                 elif isinstance(segment, MultimodalInputSegmentText):
                     text_segments += segment.text
 
@@ -218,5 +241,6 @@ class _BaseClient(ABC):
         return {
             "text_tokens": text_tokens,
             "image_pixels": image_pixels,
-            "total_tokens": image_tokens + text_tokens,
+            "video_pixels": video_pixels,
+            "total_tokens": image_tokens + video_tokens + text_tokens,
         }

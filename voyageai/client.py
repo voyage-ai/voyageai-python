@@ -20,6 +20,7 @@ from voyageai.object import (
     RerankingObject,
 )
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest
+from voyageai.video_utils import Video
 
 
 class Client(_BaseClient):
@@ -149,20 +150,13 @@ class Client(_BaseClient):
 
     def multimodal_embed(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, Image, Video]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
     ) -> MultimodalEmbeddingsObject:
-        """
-        Generate multimodal embeddings for the provided inputs using the specified model.
-
-        :param inputs: Either a list of dictionaries (each with 'content') or a list of lists containing strings and/or PIL images.
-        :param model: The model identifier.
-        :param input_type: Optional input type.
-        :param truncation: Whether to apply truncation.
-        :return: An instance of MultimodalEmbeddingsObject.
-        """
         response = None
         for attempt in self._make_retry_controller():
             with attempt:
@@ -172,6 +166,8 @@ class Client(_BaseClient):
                         model=model,
                         input_type=input_type,
                         truncation=truncation,
+                        output_dtype=output_dtype,
+                        output_dimension=output_dimension,
                     ).dict(),
                     **self._params,
                 )
