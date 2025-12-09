@@ -25,6 +25,7 @@ class Client(_BaseClient):
         api_key (str): Your API key.
         max_retries (int): Maximum number of retries if API call fails.
         timeout (float): Timeout in seconds.
+        base_url (str): Base URL for the API endpoint.
     """
 
     def __init__(
@@ -32,8 +33,9 @@ class Client(_BaseClient):
         api_key: Optional[str] = None,
         max_retries: int = 0,
         timeout: Optional[float] = None,
-    ) ->None:
-        super().__init__(api_key, max_retries, timeout)
+        base_url: Optional[str] = None,
+    ) -> None:
+        super().__init__(api_key, max_retries, timeout, base_url)
 
         self.retry_controller = Retrying(
             reraise=True,
