@@ -8,6 +8,7 @@ import PIL.ImageFile
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
+from voyageai.video_utils import Video
 
 try:
     from pydantic.v1 import BaseModel, Extra, Field, ValidationError
@@ -20,6 +21,7 @@ class MultimodalEmbeddingsObject:
         self.embeddings: List[List[float]] = []
         self.text_tokens: int = 0
         self.image_pixels: int = 0
+        self.video_pixels: int = 0
         self.total_tokens: int = 0
         if response:
             self.update(response)
@@ -29,6 +31,7 @@ class MultimodalEmbeddingsObject:
             self.embeddings.append(d.embedding)
         self.text_tokens += response.usage.text_tokens
         self.image_pixels += response.usage.image_pixels
+        self.video_pixels += response.usage.video_pixels
         self.total_tokens += response.usage.total_tokens
 
 
@@ -36,6 +39,8 @@ class MultimodalInputSegmentType(str, Enum):
     TEXT = "text"
     IMAGE_URL = "image_url"
     IMAGE_BASE64 = "image_base64"
+    VIDEO_URL = "video_url"
+    VIDEO_BASE64 = "video_base64"
 
     def __str__(self):
         return self.value
@@ -65,6 +70,22 @@ class MultimodalInputSegmentImageBase64(BaseModel):
         extra = Extra.forbid
 
 
+class MultimodalInputSegmentVideoURL(BaseModel):
+    type: Literal[MultimodalInputSegmentType.VIDEO_URL] = MultimodalInputSegmentType.VIDEO_URL
+    video_url: str
+
+    class Config:
+        extra = Extra.forbid
+
+
+class MultimodalInputSegmentVideoBase64(BaseModel):
+    type: Literal[MultimodalInputSegmentType.VIDEO_BASE64] = MultimodalInputSegmentType.VIDEO_BASE64
+    video_base64: str
+
+    class Config:
+        extra = Extra.forbid
+
+
 class MultimodalInput(BaseModel):
     content: List[
         Annotated[
@@ -72,6 +93,8 @@ class MultimodalInput(BaseModel):
                 MultimodalInputSegmentText,
                 MultimodalInputSegmentImageURL,
                 MultimodalInputSegmentImageBase64,
+                MultimodalInputSegmentVideoURL,
+                MultimodalInputSegmentVideoBase64,
             ],
             Field(discriminator="type"),
         ]
@@ -83,14 +106,18 @@ class MultimodalInputRequest(BaseModel):
     model: str
     input_type: Optional[str] = None
     truncation: bool = True
+    output_dtype: Optional[str] = None
+    output_dimension: Optional[int] = None
 
     @classmethod
     def from_user_inputs(
         cls,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image, Video]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
     ) -> "MultimodalInputRequest":
         """
         Create a MultimodalInputRequest from user inputs.
@@ -148,6 +175,8 @@ class MultimodalInputRequest(BaseModel):
                 model=model,
                 input_type=input_type,
                 truncation=truncation,
+                output_dtype=output_dtype,
+                output_dimension=output_dimension,
             )
         except ValidationError as e:
             raise error.InvalidRequestError(f"Invalid request structure: {e}") from e
@@ -172,7 +201,7 @@ class MultimodalInputRequest(BaseModel):
 
     @classmethod
     def _process_list_input(
-        cls, input_list: List[Union[str, PIL.Image.Image]], idx: int
+        cls, input_list: List[Union[str, PIL.Image.Image, Video]], idx: int
     ) -> MultimodalInput:
         """
         Process a list input and convert it to a MultimodalInput instance.
@@ -185,8 +214,10 @@ class MultimodalInputRequest(BaseModel):
         if not input_list:
             raise ValueError(f"Input list at index {idx} is empty.")
 
-        if not all(isinstance(item, (str, PIL.Image.Image)) for item in input_list):
-            raise ValueError(f"All items in the list at index {idx} must be strings or PIL images.")
+        if not all(isinstance(item, (str, PIL.Image.Image, Video)) for item in input_list):
+            raise ValueError(
+                f"All items in the list at index {idx} must be strings, PIL images, or Video objects."
+            )
 
         segments = []
         for item_idx, item in enumerate(input_list):
@@ -202,8 +233,12 @@ class MultimodalInputRequest(BaseModel):
 
     @staticmethod
     def _create_segment(
-        item: Union[str, PIL.Image.Image], item_idx: int, input_idx: int
-    ) -> Union[MultimodalInputSegmentImageBase64, MultimodalInputSegmentText]:
+        item: Union[str, PIL.Image.Image, Video], item_idx: int, input_idx: int
+    ) -> Union[
+        MultimodalInputSegmentImageBase64,
+        MultimodalInputSegmentText,
+        MultimodalInputSegmentVideoBase64,
+    ]:
         """
         Create a segment based on the type of the item.
 
@@ -220,6 +255,9 @@ class MultimodalInputRequest(BaseModel):
                 item, conversion_kwargs={"lossless": True}
             )
             return MultimodalInputSegmentImageBase64(image_base64=image_base64)
+        elif isinstance(item, Video):
+            video_base64 = MultimodalInputRequest._video_to_base64(item)
+            return MultimodalInputSegmentVideoBase64(video_base64=video_base64)
         else:
             raise ValueError(
                 f"Unsupported item type at input {input_idx}, item {item_idx}: {type(item).__name__}"
@@ -244,3 +282,19 @@ class MultimodalInputRequest(BaseModel):
         image.convert("RGB").save(buffered, format=target_format, **conversion_kwargs)
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return f"data:{target_mime_type};base64,{img_base64}"
+
+    @staticmethod
+    def _video_to_base64(
+        video: Video,
+        target_mime_type: str = "video/mp4",
+    ) -> str:
+        """
+        Convert a Video object to a Base64-encoded data URI.
+
+        This intentionally treats the video as opaque bytes and does not perform
+        any client-side decoding or re-encoding; optimization should be handled
+        by `voyageai.video_utils.optimize_video` if desired.
+        """
+        raw_bytes = video.to_bytes()
+        vid_base64 = base64.b64encode(raw_bytes).decode("utf-8")
+        return f"data:{target_mime_type};base64,{vid_base64}"
