@@ -543,14 +543,7 @@ def optimize_video(
 
         # 4. Output settings: short GOP, no audio, H.264, yuv420p, rate control.
         x264_params = (
-            "bframes=0:"
-            "ref=1:"
-            "cabac=0:"
-            "weightp=0:"
-            "deblock=0,0:"
-            "scenecut=0:"
-            "keyint=60:"
-            "min-keyint=60"
+            "bframes=0:ref=1:cabac=0:weightp=0:deblock=0,0:scenecut=0:keyint=60:min-keyint=60"
         )
 
         output_kwargs = {

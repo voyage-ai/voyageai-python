@@ -143,7 +143,7 @@ sample_input_dict_video_url_01 = {
     "content": [
         {
             "type": "video_url",
-            "video_url": "https://archive.org/download/example_30s_0.25fps_shortgop/example_30s_0.25fps_shortgop.mp4",
+            "video_url": "https://file.garden/aTiKu4GB_i5vfop6/example_video_01.mp4",
         },
     ],
 }
