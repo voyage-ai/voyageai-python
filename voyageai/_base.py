@@ -103,7 +103,7 @@ class _BaseClient(ABC):
     @abstractmethod
     def multimodal_embed(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image, Video]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
@@ -157,7 +157,7 @@ class _BaseClient(ABC):
 
     def count_usage(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image, Video]]]],
         model: str,
     ) -> Dict[str, int]:
         """

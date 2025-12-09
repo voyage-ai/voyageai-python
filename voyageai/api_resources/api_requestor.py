@@ -451,8 +451,7 @@ class APIRequestor:
             error_message = resp["detail"]
         except (KeyError, TypeError):
             raise error.APIError(
-                "Invalid response object from API: %r (HTTP response code "
-                "was %d)" % (rbody, rcode),
+                "Invalid response object from API: %r (HTTP response code was %d)" % (rbody, rcode),
                 rbody,
                 rcode,
                 resp,
