@@ -91,7 +91,7 @@ def default_api_key() -> str:
             "API keys can be generated in Voyage AI's dashboard (https://dash.voyageai.com)."
         )
 
-def get_api_endpoint(api_key: str) -> str:
+def get_default_base_url(api_key: str) -> str:
     if api_key.startswith('al-'):
         return "https://ai.mongodb.com/v1"
     else:

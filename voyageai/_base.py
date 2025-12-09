@@ -14,7 +14,7 @@ import voyageai.error as error
 from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest, MultimodalInputSegmentText, \
     MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64, MultimodalEmbeddingsObject
-from voyageai.util import default_api_key, get_default_api_endpoint
+from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
 
 
@@ -54,11 +54,11 @@ class _BaseClient(ABC):
     ) -> None:
 
         self.api_key = api_key or default_api_key()
-        self.base_url = base_url or get_default_api_endpoint(self.api_key)
 
         self._params = {
             "api_key": self.api_key,
             "request_timeout": timeout,
+            "base_url": base_url,
         }
 
     @abstractmethod    
