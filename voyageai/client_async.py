@@ -42,7 +42,8 @@ class AsyncClient(_BaseClient):
     ) -> None:
         super().__init__(api_key, max_retries, timeout, base_url)
 
-        self.retry_controller = AsyncRetrying(
+    def _make_retry_controller(self) -> AsyncRetrying:
+        return AsyncRetrying(
             reraise=True,
             stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential_jitter(initial=1, max=16),
