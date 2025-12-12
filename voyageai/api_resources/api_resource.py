@@ -34,7 +34,7 @@ class APIResource(VoyageResponse):
     def create(
         cls,
         api_key=None,
-        api_base=None, # Legacy name for base_url
+        api_base=None,  # Legacy name for base_url
         base_url=None,
         request_id=None,
         request_timeout=None,
@@ -43,9 +43,7 @@ class APIResource(VoyageResponse):
         # Legacy name for base_url
         base_url = api_base or base_url
 
-        requestor, url, params, headers = cls.__prepare_create_request(
-            api_key, base_url, **params
-        )
+        requestor, url, params, headers = cls.__prepare_create_request(api_key, base_url, **params)
 
         response = requestor.request(
             "post",
