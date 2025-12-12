@@ -1,25 +1,32 @@
 import base64
+import functools
 import io
 import json
-from abc import ABC, abstractmethod
-import functools
 import warnings
-from typing import Any, Callable, List, Optional, Union, Dict
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from huggingface_hub import hf_hub_download
 import PIL.Image
+from huggingface_hub import hf_hub_download
 
 import voyageai
-import voyageai.error as error
-from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
-from voyageai.object.multimodal_embeddings import MultimodalInputRequest, MultimodalInputSegmentText, \
-    MultimodalInputSegmentImageURL, MultimodalInputSegmentImageBase64, MultimodalEmbeddingsObject
-from voyageai.util import default_api_key
 from voyageai.object import EmbeddingsObject, RerankingObject
+from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
+from voyageai.object.multimodal_embeddings import (
+    MultimodalEmbeddingsObject,
+    MultimodalInputRequest,
+    MultimodalInputSegmentImageBase64,
+    MultimodalInputSegmentImageURL,
+    MultimodalInputSegmentText,
+    MultimodalInputSegmentVideoBase64,
+    MultimodalInputSegmentVideoURL,
+)
+from voyageai.util import default_api_key
+from voyageai.video_utils import Video
 
 
 def _get_client_config(
-        model: str,
+    model: str,
 ) -> dict:
     try:
         config_path = hf_hub_download(repo_id=f"voyageai/{model}", filename="client_config.json")
@@ -52,8 +59,8 @@ class _BaseClient(ABC):
         timeout: Optional[float] = None,
         base_url: Optional[str] = None,
     ) -> None:
-
         self.api_key = api_key or default_api_key()
+        self.max_retries = max_retries
 
         self._params = {
             "api_key": self.api_key,
@@ -61,7 +68,7 @@ class _BaseClient(ABC):
             "base_url": base_url,
         }
 
-    @abstractmethod    
+    @abstractmethod
     def embed(
         self,
         texts: List[str],
@@ -99,7 +106,7 @@ class _BaseClient(ABC):
     @abstractmethod
     def multimodal_embed(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image, Video]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
@@ -124,7 +131,7 @@ class _BaseClient(ABC):
                 f"Failed to load the tokenizer for `{model}`. Please ensure that it is a valid model name."
             )
             raise
-        
+
         return tokenizer
 
     def tokenize(
@@ -132,7 +139,6 @@ class _BaseClient(ABC):
         texts: List[str],
         model: Optional[str] = None,
     ) -> List[Any]:
-
         if model is None:
             warnings.warn(
                 "Please specify the `model` when using the tokenizer. Voyage's older models use the same "
@@ -154,12 +160,12 @@ class _BaseClient(ABC):
 
     def count_usage(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, PIL.Image.Image, Video]]]],
         model: str,
     ) -> Dict[str, int]:
         """
         This method returns estimated usage metrics for the provided input.
-        Currently, only multimodal models are supported. Image URL segments are not supported.
+        Currently, only multimodal models are supported. Image and video URL segments are not supported.
 
         Args:
             inputs (list): a list of inputs
@@ -170,6 +176,7 @@ class _BaseClient(ABC):
             - for multimodal models:
               - "text_tokens": the number of tokens represented by the text in the items in the input
               - "image_pixels": the number of pixels represented by the images in the items in the input
+              - "video_pixels": the number of pixels represented by the videos in the items in the input
               - "total_tokens": the total number of tokens represented by the items in the input
         """
         client_config = _get_client_config(model)
@@ -184,13 +191,21 @@ class _BaseClient(ABC):
         )
 
         image_tokens, image_pixels, text_tokens = 0, 0, 0
+        video_tokens, video_pixels = 0, 0
 
         for item in request.inputs:
             text_segments = ""
 
             for segment in item.content:
                 if isinstance(segment, MultimodalInputSegmentImageURL):
-                    raise voyageai.error.InvalidRequestError("count_usage does not support image URL segments.")
+                    raise voyageai.error.InvalidRequestError(
+                        "count_usage does not support image URL segments."
+                    )
+
+                elif isinstance(segment, MultimodalInputSegmentVideoURL):
+                    raise voyageai.error.InvalidRequestError(
+                        "count_usage does not support video URL segments."
+                    )
 
                 elif isinstance(segment, MultimodalInputSegmentImageBase64):
                     try:
@@ -198,14 +213,28 @@ class _BaseClient(ABC):
                         image_data = base64.b64decode(image_str)
                         image = PIL.Image.open(io.BytesIO(image_data))
                         this_image_pixels = max(
-                            min_pixels,
-                            min(max_pixels, image.height * image.width)
+                            min_pixels, min(max_pixels, image.height * image.width)
                         )
                         image_pixels += this_image_pixels
                         image_tokens += this_image_pixels // pixel_to_token_ratio
 
                     except Exception as e:
-                        raise voyageai.error.InvalidRequestError(f"Unable to process base64 image: {e}")
+                        raise voyageai.error.InvalidRequestError(
+                            f"Unable to process base64 image: {e}"
+                        )
+
+                elif isinstance(segment, MultimodalInputSegmentVideoBase64):
+                    try:
+                        video_str = segment.video_base64.split(",")[1]
+                        video_data = base64.b64decode(video_str)
+                        video = Video.from_file(io.BytesIO(video_data), model=model, optimize=False)
+                        video_pixels += video.num_pixels
+                        video_tokens += video.estimated_num_tokens
+
+                    except Exception as e:
+                        raise voyageai.error.InvalidRequestError(
+                            f"Unable to process base64 video: {e}"
+                        )
 
                 elif isinstance(segment, MultimodalInputSegmentText):
                     text_segments += segment.text
@@ -215,5 +244,6 @@ class _BaseClient(ABC):
         return {
             "text_tokens": text_tokens,
             "image_pixels": image_pixels,
-            "total_tokens": image_tokens + text_tokens,
+            "video_pixels": video_pixels,
+            "total_tokens": image_tokens + video_tokens + text_tokens,
         }

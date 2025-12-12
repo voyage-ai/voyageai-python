@@ -103,3 +103,7 @@ class ServerError(VoyageError):
 
 class ServiceUnavailableError(VoyageError):
     pass
+
+
+class VideoProcessingError(VoyageError):
+    pass

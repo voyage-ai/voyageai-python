@@ -1,22 +1,27 @@
 import warnings
-from typing import Callable, List, Optional, Union, Dict
+from typing import Callable, Dict, List, Optional, Union
 
 from PIL.Image import Image
 from tenacity import (
     AsyncRetrying,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
-    retry_if_exception_type,
 )
 
 import voyageai
+import voyageai.error as error
 from voyageai._base import _BaseClient
 from voyageai.chunking import apply_chunking
-import voyageai.error as error
-from voyageai.object.multimodal_embeddings import MultimodalInputRequest
 from voyageai.object import (
-    ContextualizedEmbeddingsObject, EmbeddingsObject, RerankingObject, MultimodalEmbeddingsObject
+    ContextualizedEmbeddingsObject,
+    EmbeddingsObject,
+    MultimodalEmbeddingsObject,
+    RerankingObject,
 )
+from voyageai.object.multimodal_embeddings import MultimodalInputRequest
+from voyageai.video_utils import Video
+
 
 class AsyncClient(_BaseClient):
     """Voyage AI Async Client
@@ -39,7 +44,7 @@ class AsyncClient(_BaseClient):
 
         self.retry_controller = AsyncRetrying(
             reraise=True,
-            stop=stop_after_attempt(max_retries),
+            stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential_jitter(initial=1, max=16),
             retry=(
                 retry_if_exception_type(error.RateLimitError)
@@ -57,7 +62,6 @@ class AsyncClient(_BaseClient):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> EmbeddingsObject:
-
         if model is None:
             model = voyageai.VOYAGE_EMBED_DEFAULT_MODEL
             warnings.warn(
@@ -68,7 +72,7 @@ class AsyncClient(_BaseClient):
             )
 
         response = None
-        async for attempt in self.retry_controller:
+        async for attempt in self._make_retry_controller():
             with attempt:
                 response = await voyageai.Embedding.acreate(
                     input=texts,
@@ -95,9 +99,8 @@ class AsyncClient(_BaseClient):
         output_dimension: Optional[int] = None,
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
     ) -> ContextualizedEmbeddingsObject:
-        
         response = None
-        async for attempt in self.retry_controller:
+        async for attempt in self._make_retry_controller():
             with attempt:
                 if chunk_fn:
                     inputs = apply_chunking(inputs, chunk_fn)
@@ -115,7 +118,8 @@ class AsyncClient(_BaseClient):
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
-                response=response, chunk_texts=inputs,
+                response=response,
+                chunk_texts=inputs,
             )
         return ContextualizedEmbeddingsObject(response)
 
@@ -127,9 +131,8 @@ class AsyncClient(_BaseClient):
         top_k: Optional[int] = None,
         truncation: bool = True,
     ) -> RerankingObject:
-
         response = None
-        async for attempt in self.retry_controller:
+        async for attempt in self._make_retry_controller():
             with attempt:
                 response = await voyageai.Reranking.acreate(
                     query=query,
@@ -148,23 +151,15 @@ class AsyncClient(_BaseClient):
 
     async def multimodal_embed(
         self,
-        inputs: Union[List[Dict], List[List[Union[str, Image]]]],
+        inputs: Union[List[Dict], List[List[Union[str, Image, Video]]]],
         model: str,
         input_type: Optional[str] = None,
         truncation: bool = True,
+        output_dtype: Optional[str] = None,
+        output_dimension: Optional[int] = None,
     ) -> MultimodalEmbeddingsObject:
-        """
-        Generate multimodal embeddings asynchronously for the provided inputs using the specified model.
-
-        :param inputs: Either a list of dictionaries (each with 'content') or a list of lists containing strings and/or PIL images.
-        :param model: The model identifier.
-        :param input_type: Optional input type.
-        :param truncation: Whether to apply truncation.
-        :return: An instance of MultimodalEmbeddingsObject.
-        """
-
         response = None
-        async for attempt in self.retry_controller:
+        async for attempt in self._make_retry_controller():
             with attempt:
                 response = await voyageai.MultimodalEmbedding.acreate(
                     **MultimodalInputRequest.from_user_inputs(
@@ -172,10 +167,11 @@ class AsyncClient(_BaseClient):
                         model=model,
                         input_type=input_type,
                         truncation=truncation,
+                        output_dtype=output_dtype,
+                        output_dimension=output_dimension,
                     ).dict(),
                     **self._params,
                 )
-
         if response is None:
             raise error.APIConnectionError("Failed to get response after all retry attempts")
 

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 import platform
 import threading
 import time
@@ -185,9 +184,7 @@ class APIRequestor:
         await ctx.__aexit__(None, None, None)
         return resp
 
-    def request_headers(
-        self, method: str, extra, request_id: Optional[str]
-    ) -> Dict[str, str]:
+    def request_headers(self, method: str, extra, request_id: Optional[str]) -> Dict[str, str]:
         user_agent = "Voyage/v1 PythonBindings/%s" % (version.VERSION,)
         if voyageai.app_info:
             user_agent += " " + self.format_app_info(voyageai.app_info)
@@ -224,9 +221,7 @@ class APIRequestor:
                 headers.pop(key)
         return headers
 
-    def _validate_headers(
-        self, supplied_headers: Optional[Dict[str, str]]
-    ) -> Dict[str, str]:
+    def _validate_headers(self, supplied_headers: Optional[Dict[str, str]]) -> Dict[str, str]:
         headers: Dict[str, str] = {}
         if supplied_headers is None:
             return headers
@@ -261,9 +256,7 @@ class APIRequestor:
         data = None
         if method == "get" or method == "delete":
             if params:
-                encoded_params = urlencode(
-                    [(k, v) for k, v in params.items() if v is not None]
-                )
+                encoded_params = urlencode([(k, v) for k, v in params.items() if v is not None])
                 abs_url = _build_api_url(abs_url, encoded_params)
         elif method in {"post", "put"}:
             if params and files:
@@ -323,9 +316,7 @@ class APIRequestor:
         except requests.exceptions.Timeout as e:
             raise error.Timeout("Request timed out: {}".format(e)) from e
         except requests.exceptions.RequestException as e:
-            raise error.APIConnectionError(
-                "Error communicating with VoyageAI: {}".format(e)
-            ) from e
+            raise error.APIConnectionError("Error communicating with VoyageAI: {}".format(e)) from e
         util.log_debug(
             "Voyage API response",
             path=abs_url,
@@ -335,9 +326,7 @@ class APIRequestor:
         )
         # Don't read the whole stream for debug logging unless necessary.
         if voyageai.log == "debug":
-            util.log_debug(
-                "API response body", body=result.content, headers=result.headers
-            )
+            util.log_debug("API response body", body=result.content, headers=result.headers)
         return result
 
     async def arequest_raw(
@@ -392,9 +381,7 @@ class APIRequestor:
             )
             # Don't read the whole stream for debug logging unless necessary.
             if voyageai.log == "debug":
-                util.log_debug(
-                    "API response body", body=result.content, headers=result.headers
-                )
+                util.log_debug("API response body", body=result.content, headers=result.headers)
             return result
         except (aiohttp.ServerTimeoutError, asyncio.TimeoutError) as e:
             raise error.Timeout("Request timed out") from e
@@ -410,9 +397,7 @@ class APIRequestor:
             result.headers,
         )
 
-    async def _interpret_async_response(
-        self, result: aiohttp.ClientResponse
-    ) -> VoyageHttpResponse:
+    async def _interpret_async_response(self, result: aiohttp.ClientResponse) -> VoyageHttpResponse:
         """Returns the response(s) and a bool indicating whether it is a stream."""
         try:
             await result.read()
@@ -426,9 +411,7 @@ class APIRequestor:
             result.headers,
         )
 
-    def _interpret_response_line(
-        self, rbody: str, rcode: int, rheaders
-    ) -> VoyageHttpResponse:
+    def _interpret_response_line(self, rbody: str, rcode: int, rheaders) -> VoyageHttpResponse:
         # HTTP 204 response code does not have any content in the body.
         if rcode == 204:
             return VoyageHttpResponse(None, rheaders)
@@ -467,8 +450,7 @@ class APIRequestor:
             error_message = resp["detail"]
         except (KeyError, TypeError):
             raise error.APIError(
-                "Invalid response object from API: %r (HTTP response code "
-                "was %d)" % (rbody, rcode),
+                "Invalid response object from API: %r (HTTP response code was %d)" % (rbody, rcode),
                 rbody,
                 rcode,
                 resp,
@@ -480,17 +462,11 @@ class APIRequestor:
         )
 
         if rcode == 400:
-            return error.InvalidRequestError(
-                error_message, rbody, rcode, resp, rheaders
-            )
+            return error.InvalidRequestError(error_message, rbody, rcode, resp, rheaders)
         elif rcode == 401:
-            return error.AuthenticationError(
-                error_message, rbody, rcode, resp, rheaders
-            )
+            return error.AuthenticationError(error_message, rbody, rcode, resp, rheaders)
         elif rcode == 422:
-            return error.MalformedRequestError(
-                error_message, rbody, rcode, resp, rheaders
-            )
+            return error.MalformedRequestError(error_message, rbody, rcode, resp, rheaders)
         elif rcode == 429:
             return error.RateLimitError(error_message, rbody, rcode, resp, rheaders)
         else:

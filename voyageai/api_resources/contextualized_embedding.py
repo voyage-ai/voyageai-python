@@ -23,8 +23,8 @@ class ContextualizedEmbedding(APIResource):
         if not user_provided_encoding_format:
             for chunked_data in response.data:
                 for chunk_embedding in chunked_data.data:
-                # If an engine isn't using this optimization, don't do anything
-                    if type(chunk_embedding["embedding"]) == str:
+                    # If an engine isn't using this optimization, don't do anything
+                    if type(chunk_embedding["embedding"]) is str:
                         chunk_embedding["embedding"] = decode_base64_embedding(
                             chunk_embedding["embedding"], kwargs.get("output_dtype", None)
                         )
@@ -49,8 +49,8 @@ class ContextualizedEmbedding(APIResource):
         if not user_provided_encoding_format:
             for chunked_data in response.data:
                 for chunk_embedding in chunked_data.data:
-                # If an engine isn't using this optimization, don't do anything
-                    if type(chunk_embedding["embedding"]) == str:
+                    # If an engine isn't using this optimization, don't do anything
+                    if type(chunk_embedding["embedding"]) is str:
                         chunk_embedding["embedding"] = decode_base64_embedding(
                             chunk_embedding["embedding"], kwargs.get("output_dtype", None)
                         )

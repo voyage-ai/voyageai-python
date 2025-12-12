@@ -3,7 +3,6 @@ from voyageai.util import decode_base64_embedding
 
 
 class Embedding(APIResource):
-
     OBJECT_NAME = "embeddings"
 
     @classmethod
@@ -24,8 +23,10 @@ class Embedding(APIResource):
         if not user_provided_encoding_format:
             for data in response.data:
                 # If an engine isn't using this optimization, don't do anything
-                if type(data["embedding"]) == str:
-                    data["embedding"] = decode_base64_embedding(data["embedding"], kwargs.get("output_dtype", None))
+                if type(data["embedding"]) is str:
+                    data["embedding"] = decode_base64_embedding(
+                        data["embedding"], kwargs.get("output_dtype", None)
+                    )
 
         return response
 
@@ -47,7 +48,9 @@ class Embedding(APIResource):
         if not user_provided_encoding_format:
             for data in response.data:
                 # If an engine isn't using this optimization, don't do anything
-                if type(data["embedding"]) == str:
-                    data["embedding"] = decode_base64_embedding(data["embedding"], kwargs.get("output_dtype", None))
+                if type(data["embedding"]) is str:
+                    data["embedding"] = decode_base64_embedding(
+                        data["embedding"], kwargs.get("output_dtype", None)
+                    )
 
         return response

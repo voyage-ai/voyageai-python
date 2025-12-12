@@ -5,7 +5,6 @@ from voyageai.api_resources.api_requestor import VoyageHttpResponse
 
 
 class VoyageResponse(dict):
-
     def __init__(
         self,
         **params,
@@ -110,10 +109,7 @@ class VoyageResponse(dict):
             if isinstance(v, VoyageResponse):
                 d[k] = v.to_dict_recursive()
             elif isinstance(v, list):
-                d[k] = [
-                    e.to_dict_recursive() if isinstance(e, VoyageResponse) else e
-                    for e in v
-                ]
+                d[k] = [e.to_dict_recursive() if isinstance(e, VoyageResponse) else e for e in v]
         return d
 
     # This class overrides __setitem__ to throw exceptions on inputs that it

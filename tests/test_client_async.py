@@ -5,7 +5,6 @@ from voyageai.chunking import default_chunk_fn
 
 
 class TestAsyncClient:
-
     embed_model = "voyage-2"
     context_embed_model = "voyage-context-3"
     rerank_model = "rerank-lite-1"
@@ -17,7 +16,7 @@ class TestAsyncClient:
         "This is a test document 2.",
     ]
     sample_chunked_query = [[sample_query]]
-    sample_chunked_docs =[
+    sample_chunked_docs = [
         ["This is doc 1 chunk 1."],
         ["This is doc 2 chunk 1.", "This is doc 2 chunk 2."],
     ]
@@ -44,14 +43,10 @@ class TestAsyncClient:
     async def test_async_client_embed_input_type(self):
         vo = voyageai.AsyncClient()
         query_embd = (
-            await vo.embed(
-                [self.sample_query], model=self.embed_model, input_type="query"
-            )
+            await vo.embed([self.sample_query], model=self.embed_model, input_type="query")
         ).embeddings[0]
         doc_embd = (
-            await vo.embed(
-                self.sample_docs, model=self.embed_model, input_type="document"
-            )
+            await vo.embed(self.sample_docs, model=self.embed_model, input_type="document")
         ).embeddings[0]
         assert len(query_embd) == 1024
         assert len(doc_embd) == 1024
@@ -84,7 +79,9 @@ class TestAsyncClient:
         assert isinstance(result.embeddings[0][0], float)
         assert result.total_tokens > 0
 
-        result = await vo.embed([self.sample_query], model=self.embed_model, output_dtype="float", output_dimension=1024)
+        result = await vo.embed(
+            [self.sample_query], model=self.embed_model, output_dtype="float", output_dimension=1024
+        )
         assert len(result.embeddings) == 1
         assert len(result.embeddings[0]) == 1024
         assert isinstance(result.embeddings[0][0], float)
@@ -96,12 +93,22 @@ class TestAsyncClient:
         assert len(result.embeddings[0]) == 1024
         assert isinstance(result.embeddings[0][0], float)
 
-        result = await vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="int8", output_dimension=2048)
+        result = await vo.embed(
+            [self.sample_query],
+            model=conversion_enabled_model,
+            output_dtype="int8",
+            output_dimension=2048,
+        )
         assert len(result.embeddings) == 1
         assert len(result.embeddings[0]) == 2048
         assert isinstance(result.embeddings[0][0], int)
 
-        result = await vo.embed([self.sample_query], model=conversion_enabled_model, output_dtype="ubinary", output_dimension=256)
+        result = await vo.embed(
+            [self.sample_query],
+            model=conversion_enabled_model,
+            output_dtype="ubinary",
+            output_dimension=256,
+        )
         assert len(result.embeddings) == 1
         assert len(result.embeddings[0]) == 32
         assert isinstance(result.embeddings[0][0], int)
@@ -109,17 +116,21 @@ class TestAsyncClient:
     """
     Contextualized embeddings
     """
+
     @pytest.mark.asyncio
     async def test_async_client_contextualized_embed(self):
         vo = voyageai.AsyncClient()
-        result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)
+        result = await vo.contextualized_embed(
+            inputs=self.sample_chunked_query, model=self.context_embed_model
+        )
         assert len(result.results) == 1
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 1024
         assert result.total_tokens > 0
 
         result = await vo.contextualized_embed(
-            inputs=self.sample_chunked_docs, model=self.context_embed_model)
+            inputs=self.sample_chunked_docs, model=self.context_embed_model
+        )
         assert len(result.results) == 2
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 1024
@@ -148,8 +159,8 @@ class TestAsyncClient:
         vo = voyageai.AsyncClient()
         doc = "I am an unchunked document"
         result = await vo.contextualized_embed(
-            inputs=[[doc], [doc, doc]], 
-            model=self.context_embed_model, 
+            inputs=[[doc], [doc, doc]],
+            model=self.context_embed_model,
             chunk_fn=default_chunk_fn(chunk_size=1),
         )
         assert len(result.results) == 2
@@ -163,7 +174,9 @@ class TestAsyncClient:
     async def test_async_client_contextualized_embed_batch_size(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(voyageai.error.InvalidRequestError):
-            await vo.contextualized_embed(inputs=self.sample_chunked_docs * 1100, model=self.context_embed_model)
+            await vo.contextualized_embed(
+                inputs=self.sample_chunked_docs * 1100, model=self.context_embed_model
+            )
 
     @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_context_length(self):
@@ -177,37 +190,58 @@ class TestAsyncClient:
     async def test_async_client_contextualized_embed_invalid_request(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(error.InvalidRequestError):
-            await vo.contextualized_embed(inputs=self.sample_chunked_query, model="wrong-model-name")
+            await vo.contextualized_embed(
+                inputs=self.sample_chunked_query, model="wrong-model-name"
+            )
 
     @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_timeout(self):
         vo = voyageai.AsyncClient(timeout=1, max_retries=1)
         with pytest.raises(error.Timeout):
-            await vo.contextualized_embed(inputs=[[self.sample_query] * 100] * 100, model=self.context_embed_model)
+            await vo.contextualized_embed(
+                inputs=[[self.sample_query] * 100] * 100, model=self.context_embed_model
+            )
 
     @pytest.mark.asyncio
     async def test_async_client_contextualized_embed_output_dtype(self):
         vo = voyageai.AsyncClient()
-        result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model)
+        result = await vo.contextualized_embed(
+            inputs=self.sample_chunked_query, model=self.context_embed_model
+        )
         assert len(result.results) == 1
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 1024
         assert isinstance(result.results[0].embeddings[0][0], float)
         assert result.total_tokens > 0
 
-        result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="float", output_dimension=1024)
+        result = await vo.contextualized_embed(
+            inputs=self.sample_chunked_query,
+            model=self.context_embed_model,
+            output_dtype="float",
+            output_dimension=1024,
+        )
         assert len(result.results) == 1
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 1024
         assert isinstance(result.results[0].embeddings[0][0], float)
 
-        result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="int8", output_dimension=2048)
+        result = await vo.contextualized_embed(
+            inputs=self.sample_chunked_query,
+            model=self.context_embed_model,
+            output_dtype="int8",
+            output_dimension=2048,
+        )
         assert len(result.results) == 1
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 2048
         assert isinstance(result.results[0].embeddings[0][0], int)
 
-        result = await vo.contextualized_embed(inputs=self.sample_chunked_query, model=self.context_embed_model, output_dtype="ubinary", output_dimension=256)
+        result = await vo.contextualized_embed(
+            inputs=self.sample_chunked_query,
+            model=self.context_embed_model,
+            output_dtype="ubinary",
+            output_dimension=256,
+        )
         assert len(result.results) == 1
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 32
@@ -220,9 +254,7 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_async_client_rerank(self):
         vo = voyageai.AsyncClient()
-        reranking = await vo.rerank(
-            self.sample_query, self.sample_docs, self.rerank_model
-        )
+        reranking = await vo.rerank(self.sample_query, self.sample_docs, self.rerank_model)
         assert len(reranking.results) == len(self.sample_docs)
 
         for i in range(len(self.sample_docs)):
@@ -237,9 +269,7 @@ class TestAsyncClient:
     async def test_async_client_rerank_invalid_request(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(error.InvalidRequestError):
-            await vo.rerank(
-                self.sample_query, self.sample_docs * 400, self.rerank_model
-            )
+            await vo.rerank(self.sample_query, self.sample_docs * 400, self.rerank_model)
 
         with pytest.raises(error.InvalidRequestError):
             await vo.rerank(self.sample_query, self.sample_docs, "wrong-model-name")

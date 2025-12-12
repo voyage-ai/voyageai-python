@@ -1,15 +1,12 @@
 from collections import namedtuple
-from typing import List, Optional
+from typing import List
+
 from voyageai.api_resources import VoyageResponse
 
-
-RerankingResult = namedtuple(
-    "RerankingResult", ["index", "document", "relevance_score"]
-)
+RerankingResult = namedtuple("RerankingResult", ["index", "document", "relevance_score"])
 
 
 class RerankingObject:
-
     def __init__(self, documents: List[str], response: VoyageResponse):
         self.results: List[RerankingResult] = [
             RerankingResult(
