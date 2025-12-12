@@ -33,9 +33,9 @@ def _get_embeddings(
 ) -> List[List[float]]:
     """Python wrapper for one Voyage API call."""
     _check_input_type(input_type)
-    assert len(list_of_text) <= MAX_BATCH_SIZE, (
-        f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
-    )
+    assert (
+        len(list_of_text) <= MAX_BATCH_SIZE
+    ), f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
 
     data = voyageai.Embedding.create(
         input=list_of_text, model=model, input_type=input_type, **kwargs
@@ -56,9 +56,9 @@ async def _aget_embeddings(
 ) -> List[List[float]]:
     """Python wrapper for one async Voyage API call."""
     _check_input_type(input_type)
-    assert len(list_of_text) <= MAX_BATCH_SIZE, (
-        f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
-    )
+    assert (
+        len(list_of_text) <= MAX_BATCH_SIZE
+    ), f"The length of list_of_text should not be larger than {MAX_BATCH_SIZE}."
 
     semaphore = kwargs.pop("semaphore", AsyncExitStack())
     rate_limit = kwargs.pop("rate_limit", AsyncExitStack())
@@ -117,9 +117,9 @@ def get_embeddings(
     if len(list_of_text) <= MAX_BATCH_SIZE:
         return _get_embeddings(list_of_text, model, input_type, **kwargs)
 
-    assert len(list_of_text) <= MAX_LIST_LENGTH, (
-        f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
-    )
+    assert (
+        len(list_of_text) <= MAX_LIST_LENGTH
+    ), f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
 
     batches = [
         list_of_text[i : i + MAX_BATCH_SIZE] for i in range(0, len(list_of_text), MAX_BATCH_SIZE)
@@ -172,9 +172,9 @@ async def aget_embeddings(
     if len(list_of_text) <= MAX_BATCH_SIZE:
         return await _aget_embeddings(list_of_text, model, input_type, **kwargs)
 
-    assert len(list_of_text) <= MAX_LIST_LENGTH, (
-        f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
-    )
+    assert (
+        len(list_of_text) <= MAX_LIST_LENGTH
+    ), f"The length of list_of_text should not be larger than {MAX_LIST_LENGTH}."
 
     semaphore = asyncio.Semaphore(value=DEFAULT_CONCURRENCE)
     rate_limit = AsyncLimiter(DEFAULT_RPM, 60)
