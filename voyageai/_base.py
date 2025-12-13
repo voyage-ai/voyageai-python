@@ -21,7 +21,7 @@ from voyageai.object.multimodal_embeddings import (
     MultimodalInputSegmentVideoBase64,
     MultimodalInputSegmentVideoURL,
 )
-from voyageai.util import default_api_key
+from voyageai.util import default_api_key, get_default_base_url
 from voyageai.video_utils import Video
 
 
@@ -61,6 +61,8 @@ class _BaseClient(ABC):
     ) -> None:
         self.api_key = api_key or default_api_key()
         self.max_retries = max_retries
+        base_url = base_url or get_default_base_url(self.api_key)
+
 
         self._params = {
             "api_key": self.api_key,
