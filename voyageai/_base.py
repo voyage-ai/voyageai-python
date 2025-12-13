@@ -63,7 +63,6 @@ class _BaseClient(ABC):
         self.max_retries = max_retries
         base_url = base_url or get_default_base_url(self.api_key)
 
-
         self._params = {
             "api_key": self.api_key,
             "request_timeout": timeout,
