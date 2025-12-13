@@ -42,7 +42,6 @@ if TYPE_CHECKING:
 
 api_key: Optional[str] = None
 api_key_path: Optional[str] = None
-api_base: str = "https://api.voyageai.com/v1"
 
 verify_ssl_certs = True  # No effect. Certificates are always verified.
 proxy = None

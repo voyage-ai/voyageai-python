@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.6"
+version = "0.3.7"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
