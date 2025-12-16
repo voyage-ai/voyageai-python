@@ -18,13 +18,14 @@ class APIResource(VoyageResponse):
     def __prepare_create_request(
         cls,
         api_key=None,
-        api_base=None,
+        base_url=None,
         **params,
     ):
         requestor = api_requestor.APIRequestor(
             api_key,
-            api_base=api_base,
+            base_url,
         )
+
         url = cls.class_url()
         headers = params.pop("headers", None)
 
@@ -34,12 +35,12 @@ class APIResource(VoyageResponse):
     def create(
         cls,
         api_key=None,
-        api_base=None,
         request_id=None,
         request_timeout=None,
         **params,
     ):
-        requestor, url, params, headers = cls.__prepare_create_request(api_key, api_base, **params)
+        base_url = params.pop("base_url", None)
+        requestor, url, params, headers = cls.__prepare_create_request(api_key, base_url, **params)
 
         response = requestor.request(
             "post",
@@ -62,7 +63,9 @@ class APIResource(VoyageResponse):
         request_timeout=None,
         **params,
     ):
-        requestor, url, params, headers = cls.__prepare_create_request(api_key, api_base, **params)
+        base_url = params.pop("base_url", None)
+        requestor, url, params, headers = cls.__prepare_create_request(api_key, base_url, **params)
+
         response = await requestor.arequest(
             "post",
             url,

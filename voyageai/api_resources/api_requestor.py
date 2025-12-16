@@ -117,10 +117,10 @@ class APIRequestor:
     def __init__(
         self,
         key=None,
-        api_base=None,
+        base_url=None,
     ):
-        self.api_base = api_base or voyageai.api_base
         self.api_key = key or util.default_api_key()
+        self.base_url = base_url or util.get_default_base_url(self.api_key)
 
     def request(
         self,
@@ -250,7 +250,7 @@ class APIRequestor:
         files,
         request_id: Optional[str],
     ) -> Tuple[str, Dict[str, str], Optional[bytes]]:
-        abs_url = "%s%s" % (self.api_base, url)
+        abs_url = "%s%s" % (self.base_url, url)
         headers = self._validate_headers(supplied_headers)
 
         data = None
@@ -292,7 +292,6 @@ class APIRequestor:
         abs_url, headers, data = self._prepare_request_raw(
             url, supplied_headers, method, params, files, request_id
         )
-
         if not hasattr(_thread_context, "session"):
             _thread_context.session = _make_session()
             _thread_context.session_create_time = time.time()
