@@ -51,6 +51,7 @@ class AsyncClient(_BaseClient):
                 retry_if_exception_type(error.RateLimitError)
                 | retry_if_exception_type(error.ServiceUnavailableError)
                 | retry_if_exception_type(error.Timeout)
+                | retry_if_exception_type(error.APIConnectionError)
             ),
         )
 
