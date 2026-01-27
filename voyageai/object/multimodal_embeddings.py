@@ -11,9 +11,9 @@ from voyageai.api_resources import VoyageResponse
 from voyageai.video_utils import Video
 
 try:
-    from pydantic.v1 import BaseModel, Extra, Field, ValidationError
-except ImportError:
     from pydantic import BaseModel, Extra, Field, ValidationError
+except ImportError:
+    from pydantic.v1 import BaseModel, Extra, Field, ValidationError
 
 
 class MultimodalEmbeddingsObject:
