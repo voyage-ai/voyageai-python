@@ -187,8 +187,8 @@ def _load_video_bytes(video: Union[str, PathLike[str], bytes, Video]) -> bytes:
 def _ensure_ffmpeg_available() -> None:
     if ffmpeg is None:
         raise ImportError(
-            "ffmpeg-python is required for video optimization. "
-            "Install `ffmpeg-python` and ensure `ffmpeg` is available on PATH."
+            "The 'ffmpeg-python' package is required for video optimization. "
+            "Install it with: pip install voyageai[video]"
         )
     if shutil.which("ffmpeg") is None:
         raise EnvironmentError(
