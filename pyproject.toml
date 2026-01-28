@@ -1,18 +1,18 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.7"
+version = "0.3.8"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9,<3.14"
+python = "^3.9,<3.15"
 requests = "*"
 aiohttp = "*"
 tenacity = "*"
 numpy = [
     {version = "*", python = ">=3.9,<3.13"},
-    {version = ">=2.1.0", python = ">=3.13,<3.14"}
+    {version = ">=2.1.0", python = ">=3.13,<3.15"}
 ]
 aiolimiter = "*"
 pillow = "*"
