@@ -46,7 +46,7 @@ class _BaseClient(ABC):
     """Voyage AI Client
 
     Args:
-        api_key (str): Your API key.
+        api_key (str): Your API key (optional for local models).
         max_retries (int): Maximum number of retries if API call fails.
         timeout (float): Timeout in seconds.
         base_url (str): Base URL for the API endpoint.
@@ -59,9 +59,18 @@ class _BaseClient(ABC):
         timeout: Optional[float] = None,
         base_url: Optional[str] = None,
     ) -> None:
-        self.api_key = api_key or default_api_key()
+        # API key is optional - allow None for local-only usage
+        try:
+            self.api_key = api_key or default_api_key()
+        except voyageai.error.AuthenticationError:
+            # No API key available - that's OK for local models
+            self.api_key = None
+
         self.max_retries = max_retries
-        base_url = base_url or get_default_base_url(self.api_key)
+
+        # Only set base_url if we have an API key
+        if self.api_key:
+            base_url = base_url or get_default_base_url(self.api_key)
 
         self._params = {
             "api_key": self.api_key,
