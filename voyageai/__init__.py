@@ -36,6 +36,20 @@ from voyageai.embeddings_utils import (
 )
 from voyageai.version import VERSION
 
+
+def _is_local_available() -> bool:
+    """Check if sentence-transformers and torch are installed."""
+    try:
+        import sentence_transformers  # noqa: F401
+        import torch  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+HAS_LOCAL = _is_local_available()
+
 if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession

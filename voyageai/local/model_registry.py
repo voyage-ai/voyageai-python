@@ -1,0 +1,154 @@
+"""Model configuration and thread-safe caching for local models."""
+
+import threading
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+
+@dataclass(frozen=True)
+class LocalModelConfig:
+    """Configuration for a local embedding model."""
+
+    huggingface_id: str
+    max_tokens: int
+    default_dimension: int
+    supported_dimensions: tuple
+    supported_precisions: tuple
+    trust_remote_code: bool = True
+
+    def validate_dimension(self, dimension: Optional[int]) -> int:
+        """Validate and return the dimension to use.
+
+        Args:
+            dimension: Requested dimension, or None for default.
+
+        Returns:
+            The dimension to use.
+
+        Raises:
+            ValueError: If dimension is not supported.
+        """
+        if dimension is None:
+            return self.default_dimension
+        if dimension not in self.supported_dimensions:
+            raise ValueError(
+                f"Invalid output_dimension {dimension}. "
+                f"Supported dimensions: {self.supported_dimensions}"
+            )
+        return dimension
+
+    def validate_precision(self, precision: Optional[str]) -> Optional[str]:
+        """Validate and return the precision to use.
+
+        Args:
+            precision: Requested precision, or None for default (float32).
+
+        Returns:
+            The precision to use.
+
+        Raises:
+            ValueError: If precision is not supported.
+        """
+        if precision is None:
+            return None
+        if precision not in self.supported_precisions:
+            raise ValueError(
+                f"Invalid output_dtype '{precision}'. "
+                f"Supported dtypes: {self.supported_precisions}"
+            )
+        return precision
+
+
+# Supported local models
+SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
+    "voyage-4-nano": LocalModelConfig(
+        huggingface_id="voyageai/voyage-4-nano",
+        max_tokens=32768,
+        default_dimension=2048,
+        supported_dimensions=(2048, 1024, 512, 256),
+        supported_precisions=("float32", "int8", "uint8", "binary", "ubinary"),
+        trust_remote_code=True,
+    ),
+}
+
+
+def get_model_config(model: str) -> LocalModelConfig:
+    """Get configuration for a model.
+
+    Args:
+        model: Model name.
+
+    Returns:
+        LocalModelConfig for the model.
+
+    Raises:
+        ValueError: If model is not supported.
+    """
+    if model not in SUPPORTED_MODELS:
+        raise ValueError(
+            f"Unsupported local model '{model}'. "
+            f"Supported models: {list(SUPPORTED_MODELS.keys())}"
+        )
+    return SUPPORTED_MODELS[model]
+
+
+class ModelCache:
+    """Thread-safe singleton cache for loaded models.
+
+    Avoids reloading models per call, which can be expensive.
+    """
+
+    _instance: Optional["ModelCache"] = None
+    _lock: threading.Lock = threading.Lock()
+
+    def __new__(cls) -> "ModelCache":
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._cache: Dict[str, Any] = {}
+                    cls._instance._cache_lock = threading.Lock()
+        return cls._instance
+
+    def get(self, key: str) -> Optional[Any]:
+        """Get a cached model.
+
+        Args:
+            key: Cache key (typically model name + device).
+
+        Returns:
+            Cached model or None if not found.
+        """
+        with self._cache_lock:
+            return self._cache.get(key)
+
+    def set(self, key: str, model: Any) -> None:
+        """Cache a model.
+
+        Args:
+            key: Cache key.
+            model: Model to cache.
+        """
+        with self._cache_lock:
+            self._cache[key] = model
+
+    def clear(self) -> None:
+        """Clear all cached models."""
+        with self._cache_lock:
+            self._cache.clear()
+
+    def get_or_load(self, key: str, loader: callable) -> Any:
+        """Get a cached model or load it if not cached.
+
+        Args:
+            key: Cache key.
+            loader: Callable to load the model if not cached.
+
+        Returns:
+            The cached or newly loaded model.
+        """
+        model = self.get(key)
+        if model is None:
+            model = loader()
+            self.set(key, model)
+        return model

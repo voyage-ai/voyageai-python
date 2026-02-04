@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.8"
+version = "0.3.9"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
@@ -20,6 +20,11 @@ pydantic = ">=1.10.8"
 tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
 ffmpeg-python = "*"
+sentence-transformers = {version = ">=3.0.0", optional = true}
+torch = {version = ">=2.0.0", optional = true}
+
+[tool.poetry.extras]
+local = ["sentence-transformers", "torch"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
@@ -39,6 +44,12 @@ ignore = ["E501"]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (require external dependencies or API)",
+]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core"]
