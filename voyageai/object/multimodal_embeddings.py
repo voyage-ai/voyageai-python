@@ -5,15 +5,11 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 import PIL.Image
 import PIL.ImageFile
+from pydantic import BaseModel, Field, ValidationError
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
 from voyageai.video_utils import Video
-
-try:
-    from pydantic import BaseModel, Extra, Field, ValidationError
-except ImportError:
-    from pydantic.v1 import BaseModel, Extra, Field, ValidationError
 
 
 class MultimodalEmbeddingsObject:
@@ -51,7 +47,7 @@ class MultimodalInputSegmentText(BaseModel):
     text: str
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
 
 class MultimodalInputSegmentImageURL(BaseModel):
@@ -59,7 +55,7 @@ class MultimodalInputSegmentImageURL(BaseModel):
     image_url: str
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
 
 class MultimodalInputSegmentImageBase64(BaseModel):
@@ -67,7 +63,7 @@ class MultimodalInputSegmentImageBase64(BaseModel):
     image_base64: str
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
 
 class MultimodalInputSegmentVideoURL(BaseModel):
@@ -75,7 +71,7 @@ class MultimodalInputSegmentVideoURL(BaseModel):
     video_url: str
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
 
 class MultimodalInputSegmentVideoBase64(BaseModel):
@@ -83,7 +79,7 @@ class MultimodalInputSegmentVideoBase64(BaseModel):
     video_base64: str
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
 
 class MultimodalInput(BaseModel):
@@ -98,7 +94,7 @@ class MultimodalInput(BaseModel):
             ],
             Field(discriminator="type"),
         ]
-    ] = Field(..., min_items=1)
+    ] = Field(..., min_length=1)
 
 
 class MultimodalInputRequest(BaseModel):
@@ -195,7 +191,7 @@ class MultimodalInputRequest(BaseModel):
             raise ValueError(f"Input at index {idx} is missing the 'content' field.")
 
         try:
-            return MultimodalInput.parse_obj(input_data)
+            return MultimodalInput.model_validate(input_data)
         except ValidationError as ve:
             raise ValueError(f"Validation error for input at index {idx}: {ve}") from ve
 

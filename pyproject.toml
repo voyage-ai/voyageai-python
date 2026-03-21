@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.8"
+version = "0.3.9"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
 readme = "README.md"
@@ -16,7 +16,7 @@ numpy = [
 ]
 aiolimiter = "*"
 pillow = "*"
-pydantic = ">=1.10.8"
+pydantic = ">=2.7.4"
 tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
 ffmpeg-python = "*"
