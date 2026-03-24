@@ -13,7 +13,6 @@ from tenacity import (
 )
 
 import voyageai
-from voyageai.error import RateLimitError
 
 MAX_BATCH_SIZE = voyageai.VOYAGE_EMBED_BATCH_SIZE
 MAX_LIST_LENGTH = voyageai.VOYAGE_EMBED_BATCH_SIZE
@@ -24,7 +23,7 @@ DEFAULT_RPM = 300
 @retry(
     wait=wait_random_exponential(min=1, max=20),
     stop=stop_after_attempt(6),
-    retry=retry_if_exception_type(RateLimitError),
+    retry=retry_if_exception_type(voyageai.error.RateLimitError),
 )
 def _get_embeddings(
     list_of_text: List[str],
@@ -47,7 +46,7 @@ def _get_embeddings(
 @retry(
     wait=wait_random_exponential(min=1, max=20),
     stop=stop_after_attempt(6),
-    retry=retry_if_exception_type(RateLimitError),
+    retry=retry_if_exception_type(voyageai.error.RateLimitError),
 )
 async def _aget_embeddings(
     list_of_text: List[str],
