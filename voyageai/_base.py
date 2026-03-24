@@ -10,6 +10,7 @@ import PIL.Image
 from huggingface_hub import hf_hub_download
 
 import voyageai
+from voyageai.error import InvalidRequestError
 from voyageai.object import EmbeddingsObject, RerankingObject
 from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
 from voyageai.object.multimodal_embeddings import (
@@ -199,12 +200,12 @@ class _BaseClient(ABC):
 
             for segment in item.content:
                 if isinstance(segment, MultimodalInputSegmentImageURL):
-                    raise voyageai.error.InvalidRequestError(
+                    raise InvalidRequestError(
                         "count_usage does not support image URL segments."
                     )
 
                 elif isinstance(segment, MultimodalInputSegmentVideoURL):
-                    raise voyageai.error.InvalidRequestError(
+                    raise InvalidRequestError(
                         "count_usage does not support video URL segments."
                     )
 
@@ -220,7 +221,7 @@ class _BaseClient(ABC):
                         image_tokens += this_image_pixels // pixel_to_token_ratio
 
                     except Exception as e:
-                        raise voyageai.error.InvalidRequestError(
+                        raise InvalidRequestError(
                             f"Unable to process base64 image: {e}"
                         )
 
@@ -233,7 +234,7 @@ class _BaseClient(ABC):
                         video_tokens += video.estimated_num_tokens
 
                     except Exception as e:
-                        raise voyageai.error.InvalidRequestError(
+                        raise InvalidRequestError(
                             f"Unable to process base64 video: {e}"
                         )
 
