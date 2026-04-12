@@ -5,7 +5,7 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 import PIL.Image
 import PIL.ImageFile
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
@@ -43,43 +43,38 @@ class MultimodalInputSegmentType(str, Enum):
 
 
 class MultimodalInputSegmentText(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.TEXT] = MultimodalInputSegmentType.TEXT
     text: str
 
-    class Config:
-        extra = "forbid"
-
 
 class MultimodalInputSegmentImageURL(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.IMAGE_URL] = MultimodalInputSegmentType.IMAGE_URL
     image_url: str
 
-    class Config:
-        extra = "forbid"
-
 
 class MultimodalInputSegmentImageBase64(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.IMAGE_BASE64] = MultimodalInputSegmentType.IMAGE_BASE64
     image_base64: str
 
-    class Config:
-        extra = "forbid"
-
 
 class MultimodalInputSegmentVideoURL(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.VIDEO_URL] = MultimodalInputSegmentType.VIDEO_URL
     video_url: str
 
-    class Config:
-        extra = "forbid"
-
 
 class MultimodalInputSegmentVideoBase64(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.VIDEO_BASE64] = MultimodalInputSegmentType.VIDEO_BASE64
     video_base64: str
-
-    class Config:
-        extra = "forbid"
 
 
 class MultimodalInput(BaseModel):

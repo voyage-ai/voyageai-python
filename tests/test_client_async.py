@@ -1,9 +1,16 @@
+import os
+
 import pytest
 import voyageai
 import voyageai.error as error
 from voyageai.chunking import default_chunk_fn
 
+requires_api_key = pytest.mark.skipif(
+    not os.environ.get("VOYAGE_API_KEY"), reason="VOYAGE_API_KEY not set"
+)
 
+
+@requires_api_key
 class TestAsyncClient:
     embed_model = "voyage-2"
     context_embed_model = "voyage-context-3"
