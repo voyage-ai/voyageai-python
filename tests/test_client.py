@@ -294,9 +294,7 @@ class TestClient:
         assert len(result.results[0].embeddings[0]) == 32
         assert isinstance(result.results[0].embeddings[0][0], int)
 
-    """
-    Auto-chunking validation (no network)
-    """
+    # ---- Auto-chunking validation (no network) ----
 
     def test_auto_chunk_flat_list_requires_flag_or_query(self):
         vo = voyageai.Client()
@@ -387,9 +385,7 @@ class TestClient:
                 enable_auto_chunking=True,
             )
 
-    """
-    Auto-chunking happy path (mocked transport)
-    """
+    # ---- Auto-chunking happy path (mocked transport) ----
 
     @staticmethod
     def _build_fake_response(

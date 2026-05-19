@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -36,12 +36,9 @@ def validate_and_normalize_contextualized_inputs(
     enable_auto_chunking: bool,
     chunk_size: Optional[int],
     chunk_overlap: Optional[int],
-) -> List[List[str]]:
-    """Validate contextualized-embedding params and normalize flat inputs.
-
-    Mirrors server-side validation in voyageai-backend
-    common/core/api/api_gateway.py so users see consistent error messages.
-    """
+) -> Tuple[List[List[str]], Dict[str, Any]]:
+    """Validate contextualized-embedding params, normalize flat inputs, and
+    build the auto-chunking kwargs to forward to the API."""
     if chunk_fn is not None and enable_auto_chunking:
         raise ValueError(
             "chunk_fn cannot be combined with enable_auto_chunking=True"
@@ -68,14 +65,11 @@ def validate_and_normalize_contextualized_inputs(
         raise ValueError("chunk_overlap must be greater than or equal to 0")
 
     if isinstance(inputs, list) and all(isinstance(s, str) for s in inputs):
-        if input_type == "query":
-            inputs = [[s] for s in inputs]
-        elif enable_auto_chunking:
-            inputs = [[s] for s in inputs]
-        else:
+        if input_type != "query" and not enable_auto_chunking:
             raise ValueError(
                 "List[str] inputs requires enable_auto_chunking=True or input_type='query'"
             )
+        inputs = [[s] for s in inputs]
 
     if enable_auto_chunking:
         if input_type != "document":
@@ -88,7 +82,15 @@ def validate_and_normalize_contextualized_inputs(
                     f"inputs[{i}] has {len(doc)} chunks; auto-chunking expects one string per document"
                 )
 
-    return inputs
+    extra_kwargs: Dict[str, Any] = {}
+    if enable_auto_chunking:
+        extra_kwargs["enable_auto_chunking"] = True
+    if chunk_size is not None:
+        extra_kwargs["chunk_size"] = chunk_size
+    if chunk_overlap is not None:
+        extra_kwargs["chunk_overlap"] = chunk_overlap
+
+    return inputs, extra_kwargs
 
 
 def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE) -> Callable[[str], List[str]]:

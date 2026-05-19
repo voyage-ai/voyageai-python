@@ -252,9 +252,7 @@ class TestAsyncClient:
         assert len(result.results[0].embeddings[0]) == 32
         assert isinstance(result.results[0].embeddings[0][0], int)
 
-    """
-    Auto-chunking validation (no network)
-    """
+    # ---- Auto-chunking validation (no network) ----
 
     @pytest.mark.asyncio
     async def test_async_auto_chunk_flat_list_requires_flag_or_query(self):
@@ -351,9 +349,7 @@ class TestAsyncClient:
                 enable_auto_chunking=True,
             )
 
-    """
-    Auto-chunking happy path (mocked transport)
-    """
+    # ---- Auto-chunking happy path (mocked transport) ----
 
     @staticmethod
     def _build_fake_response(

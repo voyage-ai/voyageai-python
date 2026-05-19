@@ -106,7 +106,7 @@ class Client(_BaseClient):
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
-        normalized_inputs = validate_and_normalize_contextualized_inputs(
+        normalized_inputs, extra_kwargs = validate_and_normalize_contextualized_inputs(
             inputs=inputs,
             input_type=input_type,
             chunk_fn=chunk_fn,
@@ -114,14 +114,6 @@ class Client(_BaseClient):
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
-
-        extra_kwargs: Dict[str, object] = {}
-        if enable_auto_chunking:
-            extra_kwargs["enable_auto_chunking"] = True
-        if chunk_size is not None:
-            extra_kwargs["chunk_size"] = chunk_size
-        if chunk_overlap is not None:
-            extra_kwargs["chunk_overlap"] = chunk_overlap
 
         response = None
         for attempt in self._make_retry_controller():
