@@ -1,10 +1,13 @@
 import importlib.metadata
+import re
 from typing import List
+from unittest.mock import patch
 
 import pytest
 import voyageai
 import voyageai.error as error
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from voyageai.api_resources.response import VoyageResponse
 from voyageai.chunking import default_chunk_fn
 
 
@@ -290,6 +293,222 @@ class TestClient:
         assert len(result.results[0].embeddings) == 1
         assert len(result.results[0].embeddings[0]) == 32
         assert isinstance(result.results[0].embeddings[0][0], int)
+
+    """
+    Auto-chunking validation (no network)
+    """
+
+    def test_auto_chunk_flat_list_requires_flag_or_query(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "List[str] inputs requires enable_auto_chunking=True or input_type='query'"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc text"], model=self.context_embed_model
+            )
+
+    def test_auto_chunk_requires_document_input_type(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "enable_auto_chunking=True requires input_type='document'"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc text"],
+                model=self.context_embed_model,
+                input_type="query",
+                enable_auto_chunking=True,
+            )
+
+    def test_chunk_size_requires_auto_chunking(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "chunk_size and chunk_overlap require enable_auto_chunking=True"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=self.sample_chunked_docs,
+                model=self.context_embed_model,
+                chunk_size=128,
+            )
+
+    def test_chunk_overlap_must_be_less_than_chunk_size(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "chunk_overlap (64) must be less than chunk_size (64)"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=64,
+                chunk_overlap=64,
+            )
+
+    def test_chunk_fn_and_auto_chunking_mutually_exclusive(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "chunk_fn cannot be combined with enable_auto_chunking=True"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_fn=default_chunk_fn(chunk_size=10),
+            )
+
+    def test_auto_chunking_rejects_pre_chunked_doc(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "inputs[0] has 2 chunks; auto-chunking expects one string per document"
+            ),
+        ):
+            vo.contextualized_embed(
+                inputs=[["chunk1", "chunk2"]],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+            )
+
+    """
+    Auto-chunking happy path (mocked transport)
+    """
+
+    @staticmethod
+    def _build_fake_response(
+        chunk_texts: List[List[str]],
+        chunker_version: str = "1.0.0",
+    ) -> VoyageResponse:
+        return VoyageResponse.construct_from(
+            {
+                "object": "list",
+                "data": [
+                    {
+                        "object": "list",
+                        "index": i,
+                        "data": [
+                            {
+                                "object": "embedding",
+                                "index": j,
+                                "embedding": [0.1] * 4,
+                                "text": text,
+                            }
+                            for j, text in enumerate(doc_chunks)
+                        ],
+                    }
+                    for i, doc_chunks in enumerate(chunk_texts)
+                ],
+                "model": "voyage-context-3",
+                "usage": {"total_tokens": 42},
+                "chunker_version": chunker_version,
+            }
+        )
+
+    def test_auto_chunking_forwards_params_and_normalizes_flat_input(self):
+        vo = voyageai.Client()
+        captured: dict = {}
+
+        def fake_create(**kwargs):
+            captured.update(kwargs)
+            return self._build_fake_response([["a", "b"], ["c"]])
+
+        with patch(
+            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
+        ):
+            result = vo.contextualized_embed(
+                inputs=["doc one", "doc two"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=256,
+                chunk_overlap=32,
+            )
+
+        assert captured["inputs"] == [["doc one"], ["doc two"]]
+        assert captured["enable_auto_chunking"] is True
+        assert captured["chunk_size"] == 256
+        assert captured["chunk_overlap"] == 32
+        assert result.chunk_texts == [["a", "b"], ["c"]]
+        assert result.results[0].chunk_texts == ["a", "b"]
+        assert result.chunker_version == "1.0.0"
+
+    def test_auto_chunking_with_list_of_lists_input(self):
+        vo = voyageai.Client()
+        captured: dict = {}
+
+        def fake_create(**kwargs):
+            captured.update(kwargs)
+            return self._build_fake_response([["x"]])
+
+        with patch(
+            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
+        ):
+            result = vo.contextualized_embed(
+                inputs=[["doc one"]],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+            )
+
+        assert captured["inputs"] == [["doc one"]]
+        assert captured["enable_auto_chunking"] is True
+        assert "chunk_size" not in captured
+        assert "chunk_overlap" not in captured
+        assert result.chunker_version == "1.0.0"
+
+    def test_query_flat_list_normalized_without_auto_chunking(self):
+        vo = voyageai.Client()
+        captured: dict = {}
+
+        def fake_create(**kwargs):
+            captured.update(kwargs)
+            return VoyageResponse.construct_from(
+                {
+                    "object": "list",
+                    "data": [
+                        {
+                            "object": "list",
+                            "index": 0,
+                            "data": [
+                                {"object": "embedding", "index": 0, "embedding": [0.0] * 4}
+                            ],
+                        }
+                    ],
+                    "model": "voyage-context-3",
+                    "usage": {"total_tokens": 1},
+                }
+            )
+
+        with patch(
+            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
+        ):
+            result = vo.contextualized_embed(
+                inputs=["hello"],
+                model=self.context_embed_model,
+                input_type="query",
+            )
+
+        assert captured["inputs"] == [["hello"]]
+        assert "enable_auto_chunking" not in captured
+        assert result.chunker_version is None
+        assert result.chunk_texts is None
 
     """
     Reranker

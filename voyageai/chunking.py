@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Callable, List
+from typing import Callable, List, Optional, Union
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -27,6 +27,68 @@ def apply_chunking(
     Apply chunk_fn to each string in a nested list of inputs and flatten the results
     """
     return [list(chain.from_iterable(chunk_fn(i) for i in input)) for input in inputs]
+
+
+def validate_and_normalize_contextualized_inputs(
+    inputs: Union[List[List[str]], List[str]],
+    input_type: Optional[str],
+    chunk_fn: Optional[Callable[[str], List[str]]],
+    enable_auto_chunking: bool,
+    chunk_size: Optional[int],
+    chunk_overlap: Optional[int],
+) -> List[List[str]]:
+    """Validate contextualized-embedding params and normalize flat inputs.
+
+    Mirrors server-side validation in voyageai-backend
+    common/core/api/api_gateway.py so users see consistent error messages.
+    """
+    if chunk_fn is not None and enable_auto_chunking:
+        raise ValueError(
+            "chunk_fn cannot be combined with enable_auto_chunking=True"
+        )
+
+    if not enable_auto_chunking and (
+        chunk_size is not None or chunk_overlap is not None
+    ):
+        raise ValueError(
+            "chunk_size and chunk_overlap require enable_auto_chunking=True"
+        )
+
+    if (
+        chunk_size is not None
+        and chunk_overlap is not None
+        and chunk_overlap >= chunk_size
+    ):
+        raise ValueError(
+            f"chunk_overlap ({chunk_overlap}) must be less than chunk_size ({chunk_size})"
+        )
+    if chunk_size is not None and chunk_size < 1:
+        raise ValueError("chunk_size must be greater than or equal to 1")
+    if chunk_overlap is not None and chunk_overlap < 0:
+        raise ValueError("chunk_overlap must be greater than or equal to 0")
+
+    if isinstance(inputs, list) and all(isinstance(s, str) for s in inputs):
+        if input_type == "query":
+            inputs = [[s] for s in inputs]
+        elif enable_auto_chunking:
+            inputs = [[s] for s in inputs]
+        else:
+            raise ValueError(
+                "List[str] inputs requires enable_auto_chunking=True or input_type='query'"
+            )
+
+    if enable_auto_chunking:
+        if input_type != "document":
+            raise ValueError(
+                "enable_auto_chunking=True requires input_type='document'"
+            )
+        for i, doc in enumerate(inputs):
+            if len(doc) != 1:
+                raise ValueError(
+                    f"inputs[{i}] has {len(doc)} chunks; auto-chunking expects one string per document"
+                )
+
+    return inputs
 
 
 def default_chunk_fn(chunk_size: int = DEFAULT_CHUNK_SIZE) -> Callable[[str], List[str]]:
