@@ -1,6 +1,10 @@
+import asyncio
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import voyageai
 import voyageai.error as error
+from voyageai.api_resources.api_requestor import APIRequestor, AioHTTPSession
 from voyageai.chunking import default_chunk_fn
 
 
@@ -299,3 +303,69 @@ class TestAsyncClient:
 
         total_tokens = vo.count_tokens(self.sample_docs, self.embed_model)
         assert total_tokens == 25
+
+
+class TestAsyncCancellationCleanup:
+    """Verify that asyncio.CancelledError does not leak an aiohttp.ClientSession."""
+
+    @pytest.mark.asyncio
+    async def test_arequest_cleans_up_session_on_cancellation(self):
+        requestor = APIRequestor(key="dummy")
+
+        mock_exit = AsyncMock()
+        original_aenter = AioHTTPSession.__aenter__
+
+        async def patched_aenter(self_session):
+            session = await original_aenter(self_session)
+            return session
+
+        async def slow_arequest_raw(*args, **kwargs):
+            await asyncio.sleep(3600)
+
+        with patch.object(requestor, "arequest_raw", side_effect=slow_arequest_raw), \
+             patch.object(AioHTTPSession, "__aexit__", mock_exit):
+            task = asyncio.create_task(
+                requestor.arequest("POST", "/test", params={})
+            )
+            await asyncio.sleep(0.05)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        mock_exit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_arequest_cleans_up_session_on_exception(self):
+        requestor = APIRequestor(key="dummy")
+
+        mock_exit = AsyncMock()
+
+        async def failing_arequest_raw(*args, **kwargs):
+            raise ValueError("boom")
+
+        with patch.object(requestor, "arequest_raw", side_effect=failing_arequest_raw), \
+             patch.object(AioHTTPSession, "__aexit__", mock_exit):
+            with pytest.raises(ValueError, match="boom"):
+                await requestor.arequest("POST", "/test", params={})
+
+        mock_exit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_arequest_cleans_up_session_on_success(self):
+        requestor = APIRequestor(key="dummy")
+
+        mock_exit = AsyncMock()
+        mock_response = AsyncMock()
+        mock_response.release = lambda: None
+        mock_response.status = 200
+        mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.read = AsyncMock(return_value=b'{"data": []}')
+
+        async def ok_arequest_raw(*args, **kwargs):
+            return mock_response
+
+        with patch.object(requestor, "arequest_raw", side_effect=ok_arequest_raw), \
+             patch.object(AioHTTPSession, "__aexit__", mock_exit):
+            await requestor.arequest("POST", "/test", params={})
+
+        mock_exit.assert_awaited_once()
