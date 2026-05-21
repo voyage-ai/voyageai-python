@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import voyageai
 import voyageai.error as error
-from voyageai.api_resources.api_requestor import APIRequestor, AioHTTPSession
+from voyageai.api_resources.api_requestor import AioHTTPSession, APIRequestor
 from voyageai.api_resources.response import VoyageResponse
 from voyageai.chunking import default_chunk_fn
 
