@@ -322,11 +322,11 @@ class TestAsyncCancellationCleanup:
         async def slow_arequest_raw(*args, **kwargs):
             await asyncio.sleep(3600)
 
-        with patch.object(requestor, "arequest_raw", side_effect=slow_arequest_raw), \
-             patch.object(AioHTTPSession, "__aexit__", mock_exit):
-            task = asyncio.create_task(
-                requestor.arequest("POST", "/test", params={})
-            )
+        with (
+            patch.object(requestor, "arequest_raw", side_effect=slow_arequest_raw),
+            patch.object(AioHTTPSession, "__aexit__", mock_exit),
+        ):
+            task = asyncio.create_task(requestor.arequest("POST", "/test", params={}))
             await asyncio.sleep(0.05)
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
@@ -343,8 +343,10 @@ class TestAsyncCancellationCleanup:
         async def failing_arequest_raw(*args, **kwargs):
             raise ValueError("boom")
 
-        with patch.object(requestor, "arequest_raw", side_effect=failing_arequest_raw), \
-             patch.object(AioHTTPSession, "__aexit__", mock_exit):
+        with (
+            patch.object(requestor, "arequest_raw", side_effect=failing_arequest_raw),
+            patch.object(AioHTTPSession, "__aexit__", mock_exit),
+        ):
             with pytest.raises(ValueError, match="boom"):
                 await requestor.arequest("POST", "/test", params={})
 
@@ -364,8 +366,10 @@ class TestAsyncCancellationCleanup:
         async def ok_arequest_raw(*args, **kwargs):
             return mock_response
 
-        with patch.object(requestor, "arequest_raw", side_effect=ok_arequest_raw), \
-             patch.object(AioHTTPSession, "__aexit__", mock_exit):
+        with (
+            patch.object(requestor, "arequest_raw", side_effect=ok_arequest_raw),
+            patch.object(AioHTTPSession, "__aexit__", mock_exit),
+        ):
             await requestor.arequest("POST", "/test", params={})
 
         mock_exit.assert_awaited_once()
