@@ -299,6 +299,66 @@ class TestAsyncClient:
             )
 
     @pytest.mark.asyncio
+    async def test_async_empty_inputs_rejected(self):
+        vo = voyageai.AsyncClient()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("inputs must not be empty"),
+        ):
+            await vo.contextualized_embed(
+                inputs=[],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+            )
+
+    @pytest.mark.asyncio
+    async def test_async_chunk_size_must_be_at_least_one(self):
+        vo = voyageai.AsyncClient()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_size must be greater than or equal to 1"),
+        ):
+            await vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=0,
+            )
+
+    @pytest.mark.asyncio
+    async def test_async_chunk_overlap_must_be_non_negative(self):
+        vo = voyageai.AsyncClient()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_overlap must be greater than or equal to 0"),
+        ):
+            await vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=128,
+                chunk_overlap=-1,
+            )
+
+    @pytest.mark.asyncio
+    async def test_async_chunk_overlap_requires_chunk_size(self):
+        vo = voyageai.AsyncClient()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_overlap requires chunk_size"),
+        ):
+            await vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_overlap=32,
+            )
+
+    @pytest.mark.asyncio
     async def test_async_chunk_overlap_must_be_less_than_chunk_size(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(
@@ -410,6 +470,7 @@ class TestAsyncClient:
         assert captured["chunk_overlap"] == 32
         assert result.chunk_texts == [["a", "b"], ["c"]]
         assert result.results[0].chunk_texts == ["a", "b"]
+        assert result.results[1].chunk_texts == ["c"]
         assert result.chunker_version == "1.0.0"
 
     @pytest.mark.asyncio

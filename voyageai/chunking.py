@@ -63,6 +63,11 @@ def validate_and_normalize_contextualized_inputs(
         raise ValueError("chunk_size must be greater than or equal to 1")
     if chunk_overlap is not None and chunk_overlap < 0:
         raise ValueError("chunk_overlap must be greater than or equal to 0")
+    if chunk_overlap is not None and chunk_size is None:
+        raise ValueError("chunk_overlap requires chunk_size")
+
+    if not inputs:
+        raise ValueError("inputs must not be empty")
 
     if isinstance(inputs, list) and all(isinstance(s, str) for s in inputs):
         if input_type != "query" and not enable_auto_chunking:

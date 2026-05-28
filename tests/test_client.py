@@ -337,6 +337,62 @@ class TestClient:
                 chunk_size=128,
             )
 
+    def test_empty_inputs_rejected(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("inputs must not be empty"),
+        ):
+            vo.contextualized_embed(
+                inputs=[],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+            )
+
+    def test_chunk_size_must_be_at_least_one(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_size must be greater than or equal to 1"),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=0,
+            )
+
+    def test_chunk_overlap_must_be_non_negative(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_overlap must be greater than or equal to 0"),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_size=128,
+                chunk_overlap=-1,
+            )
+
+    def test_chunk_overlap_requires_chunk_size(self):
+        vo = voyageai.Client()
+        with pytest.raises(
+            ValueError,
+            match=re.escape("chunk_overlap requires chunk_size"),
+        ):
+            vo.contextualized_embed(
+                inputs=["doc"],
+                model=self.context_embed_model,
+                input_type="document",
+                enable_auto_chunking=True,
+                chunk_overlap=32,
+            )
+
     def test_chunk_overlap_must_be_less_than_chunk_size(self):
         vo = voyageai.Client()
         with pytest.raises(
@@ -443,6 +499,7 @@ class TestClient:
         assert captured["chunk_overlap"] == 32
         assert result.chunk_texts == [["a", "b"], ["c"]]
         assert result.results[0].chunk_texts == ["a", "b"]
+        assert result.results[1].chunk_texts == ["c"]
         assert result.chunker_version == "1.0.0"
 
     def test_auto_chunking_with_list_of_lists_input(self):

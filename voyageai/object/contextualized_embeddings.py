@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Union
 
 from voyageai.api_resources import VoyageResponse
+from voyageai.error import ServerError
 
 
 @dataclass
@@ -39,7 +40,7 @@ class ContextualizedEmbeddingsObject:
                     server_texts_per_doc.append(per_doc_texts)
                     result_chunk_texts = per_doc_texts
                 elif any(t is not None for t in per_doc_texts):
-                    raise ValueError(
+                    raise ServerError(
                         f"inputs[{i}] returned a partial set of chunk texts; "
                         "expected text on every chunk or none"
                     )
@@ -58,7 +59,7 @@ class ContextualizedEmbeddingsObject:
         if client_chunk_texts is None and server_texts_per_doc:
             populated = [t for t in server_texts_per_doc if t is not None]
             if populated and len(populated) != len(server_texts_per_doc):
-                raise ValueError(
+                raise ServerError(
                     "response returned chunk texts for some documents but not others; "
                     "expected all-or-nothing"
                 )

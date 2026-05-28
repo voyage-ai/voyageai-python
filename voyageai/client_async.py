@@ -115,12 +115,13 @@ class AsyncClient(_BaseClient):
             chunk_overlap=chunk_overlap,
         )
 
+        request_inputs = (
+            apply_chunking(normalized_inputs, chunk_fn) if chunk_fn else normalized_inputs
+        )
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
-                request_inputs = normalized_inputs
-                if chunk_fn:
-                    request_inputs = apply_chunking(normalized_inputs, chunk_fn)
                 response = await voyageai.ContextualizedEmbedding.acreate(
                     inputs=request_inputs,
                     model=model,
