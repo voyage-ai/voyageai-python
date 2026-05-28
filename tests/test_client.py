@@ -304,17 +304,13 @@ class TestClient:
                 "List[str] inputs requires enable_auto_chunking=True or input_type='query'"
             ),
         ):
-            vo.contextualized_embed(
-                inputs=["doc text"], model=self.context_embed_model
-            )
+            vo.contextualized_embed(inputs=["doc text"], model=self.context_embed_model)
 
     def test_auto_chunk_requires_document_input_type(self):
         vo = voyageai.Client()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "enable_auto_chunking=True requires input_type='document'"
-            ),
+            match=re.escape("enable_auto_chunking=True requires input_type='document'"),
         ):
             vo.contextualized_embed(
                 inputs=["doc text"],
@@ -327,9 +323,7 @@ class TestClient:
         vo = voyageai.Client()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_size and chunk_overlap require enable_auto_chunking=True"
-            ),
+            match=re.escape("chunk_size and chunk_overlap require enable_auto_chunking=True"),
         ):
             vo.contextualized_embed(
                 inputs=self.sample_chunked_docs,
@@ -397,9 +391,7 @@ class TestClient:
         vo = voyageai.Client()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_overlap (64) must be less than chunk_size (64)"
-            ),
+            match=re.escape("chunk_overlap (64) must be less than chunk_size (64)"),
         ):
             vo.contextualized_embed(
                 inputs=["doc"],
@@ -414,9 +406,7 @@ class TestClient:
         vo = voyageai.Client()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_fn cannot be combined with enable_auto_chunking=True"
-            ),
+            match=re.escape("chunk_fn cannot be combined with enable_auto_chunking=True"),
         ):
             vo.contextualized_embed(
                 inputs=["doc"],
@@ -481,9 +471,7 @@ class TestClient:
             captured.update(kwargs)
             return self._build_fake_response([["a", "b"], ["c"]])
 
-        with patch(
-            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
-        ):
+        with patch("voyageai.ContextualizedEmbedding.create", side_effect=fake_create):
             result = vo.contextualized_embed(
                 inputs=["doc one", "doc two"],
                 model=self.context_embed_model,
@@ -510,9 +498,7 @@ class TestClient:
             captured.update(kwargs)
             return self._build_fake_response([["x"]])
 
-        with patch(
-            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
-        ):
+        with patch("voyageai.ContextualizedEmbedding.create", side_effect=fake_create):
             result = vo.contextualized_embed(
                 inputs=[["doc one"]],
                 model=self.context_embed_model,
@@ -539,9 +525,7 @@ class TestClient:
                         {
                             "object": "list",
                             "index": 0,
-                            "data": [
-                                {"object": "embedding", "index": 0, "embedding": [0.0] * 4}
-                            ],
+                            "data": [{"object": "embedding", "index": 0, "embedding": [0.0] * 4}],
                         }
                     ],
                     "model": "voyage-context-3",
@@ -549,9 +533,7 @@ class TestClient:
                 }
             )
 
-        with patch(
-            "voyageai.ContextualizedEmbedding.create", side_effect=fake_create
-        ):
+        with patch("voyageai.ContextualizedEmbedding.create", side_effect=fake_create):
             result = vo.contextualized_embed(
                 inputs=["hello"],
                 model=self.context_embed_model,

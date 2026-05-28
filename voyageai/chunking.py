@@ -40,22 +40,12 @@ def validate_and_normalize_contextualized_inputs(
     """Validate contextualized-embedding params, normalize flat inputs, and
     build the auto-chunking kwargs to forward to the API."""
     if chunk_fn is not None and enable_auto_chunking:
-        raise ValueError(
-            "chunk_fn cannot be combined with enable_auto_chunking=True"
-        )
+        raise ValueError("chunk_fn cannot be combined with enable_auto_chunking=True")
 
-    if not enable_auto_chunking and (
-        chunk_size is not None or chunk_overlap is not None
-    ):
-        raise ValueError(
-            "chunk_size and chunk_overlap require enable_auto_chunking=True"
-        )
+    if not enable_auto_chunking and (chunk_size is not None or chunk_overlap is not None):
+        raise ValueError("chunk_size and chunk_overlap require enable_auto_chunking=True")
 
-    if (
-        chunk_size is not None
-        and chunk_overlap is not None
-        and chunk_overlap >= chunk_size
-    ):
+    if chunk_size is not None and chunk_overlap is not None and chunk_overlap >= chunk_size:
         raise ValueError(
             f"chunk_overlap ({chunk_overlap}) must be less than chunk_size ({chunk_size})"
         )
@@ -78,9 +68,7 @@ def validate_and_normalize_contextualized_inputs(
 
     if enable_auto_chunking:
         if input_type != "document":
-            raise ValueError(
-                "enable_auto_chunking=True requires input_type='document'"
-            )
+            raise ValueError("enable_auto_chunking=True requires input_type='document'")
         for i, doc in enumerate(inputs):
             if len(doc) != 1:
                 raise ValueError(

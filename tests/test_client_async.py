@@ -263,18 +263,14 @@ class TestAsyncClient:
                 "List[str] inputs requires enable_auto_chunking=True or input_type='query'"
             ),
         ):
-            await vo.contextualized_embed(
-                inputs=["doc text"], model=self.context_embed_model
-            )
+            await vo.contextualized_embed(inputs=["doc text"], model=self.context_embed_model)
 
     @pytest.mark.asyncio
     async def test_async_auto_chunk_requires_document_input_type(self):
         vo = voyageai.AsyncClient()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "enable_auto_chunking=True requires input_type='document'"
-            ),
+            match=re.escape("enable_auto_chunking=True requires input_type='document'"),
         ):
             await vo.contextualized_embed(
                 inputs=["doc text"],
@@ -288,9 +284,7 @@ class TestAsyncClient:
         vo = voyageai.AsyncClient()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_size and chunk_overlap require enable_auto_chunking=True"
-            ),
+            match=re.escape("chunk_size and chunk_overlap require enable_auto_chunking=True"),
         ):
             await vo.contextualized_embed(
                 inputs=self.sample_chunked_docs,
@@ -363,9 +357,7 @@ class TestAsyncClient:
         vo = voyageai.AsyncClient()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_overlap (64) must be less than chunk_size (64)"
-            ),
+            match=re.escape("chunk_overlap (64) must be less than chunk_size (64)"),
         ):
             await vo.contextualized_embed(
                 inputs=["doc"],
@@ -381,9 +373,7 @@ class TestAsyncClient:
         vo = voyageai.AsyncClient()
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "chunk_fn cannot be combined with enable_auto_chunking=True"
-            ),
+            match=re.escape("chunk_fn cannot be combined with enable_auto_chunking=True"),
         ):
             await vo.contextualized_embed(
                 inputs=["doc"],
@@ -511,9 +501,7 @@ class TestAsyncClient:
                     {
                         "object": "list",
                         "index": 0,
-                        "data": [
-                            {"object": "embedding", "index": 0, "embedding": [0.0] * 4}
-                        ],
+                        "data": [{"object": "embedding", "index": 0, "embedding": [0.0] * 4}],
                     }
                 ],
                 "model": "voyage-context-3",
