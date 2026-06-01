@@ -21,7 +21,7 @@ tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
 ffmpeg-python = "*"
 sentence-transformers = {version = ">=3.0.0", optional = true}
-torch = {version = ">=2.0.0", optional = true}
+torch = {version = ">=2.9.0", optional = true}
 
 [tool.poetry.extras]
 local = ["sentence-transformers", "torch"]
