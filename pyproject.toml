@@ -20,11 +20,12 @@ pydantic = ">=1.10.8"
 tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
 ffmpeg-python = "*"
-sentence-transformers = {version = ">=3.0.0,<5.0.0", optional = true, python = ">=3.10"}
+sentence-transformers = {version = ">=5.0.0", optional = true, python = ">=3.10"}
 torch = {version = ">=2.9.0", optional = true, python = ">=3.10"}
+transformers = {version = ">=4.41.0,<5.0.0", optional = true, python = ">=3.10"}
 
 [tool.poetry.extras]
-local = ["sentence-transformers", "torch"]
+local = ["sentence-transformers", "torch", "transformers"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
