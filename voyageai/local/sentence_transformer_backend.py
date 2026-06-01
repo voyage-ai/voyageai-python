@@ -79,33 +79,19 @@ class SentenceTransformerBackend:
         precision = DTYPE_TO_PRECISION.get(output_dtype) if output_dtype else None
 
         # Build encode kwargs
-        encode_kwargs = {
-            "truncate_dim": dimension if dimension != self.config.default_dimension else None,
-        }
+        encode_kwargs = {}
+        if dimension != self.config.default_dimension:
+            encode_kwargs["truncate_dim"] = dimension
         if precision:
             encode_kwargs["precision"] = precision
 
         # Route based on input_type
         if input_type == "query":
-            # Use prompt-based encoding for queries
-            embeddings = self.model.encode(
-                texts,
-                prompt_name="query",
-                **encode_kwargs,
-            )
+            embeddings = self.model.encode_query(texts, **encode_kwargs)
         elif input_type == "document":
-            # Use prompt-based encoding for documents
-            embeddings = self.model.encode(
-                texts,
-                prompt_name="document",
-                **encode_kwargs,
-            )
+            embeddings = self.model.encode_document(texts, **encode_kwargs)
         else:
-            # Default encoding without prompts
-            embeddings = self.model.encode(
-                texts,
-                **encode_kwargs,
-            )
+            embeddings = self.model.encode(texts, **encode_kwargs)
 
         return embeddings
 
