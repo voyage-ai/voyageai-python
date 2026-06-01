@@ -69,9 +69,9 @@ class TestLocalModelIntegration:
             result = client.embed(
                 ["Test text"], model="voyage-4-nano", input_type="document", output_dimension=dim
             )
-            assert len(result.embeddings[0]) == dim, (
-                f"Expected {dim}, got {len(result.embeddings[0])}"
-            )
+            assert (
+                len(result.embeddings[0]) == dim
+            ), f"Expected {dim}, got {len(result.embeddings[0])}"
 
     def test_float32_dtype(self, check_deps):
         """Test float32 output data type (default)."""
