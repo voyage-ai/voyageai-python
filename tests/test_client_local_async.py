@@ -15,6 +15,18 @@ try:
 except ImportError:
     REAL_DEPS_AVAILABLE = False
 
+# Check if local model can actually load (fails on Python <3.10 due to
+# HuggingFace model code using 3.10+ type union syntax)
+LOCAL_MODEL_WORKS = False
+if REAL_DEPS_AVAILABLE:
+    try:
+        from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
+
+        SentenceTransformerBackend("voyage-4-nano")
+        LOCAL_MODEL_WORKS = True
+    except (TypeError, Exception):
+        pass
+
 
 @pytest.mark.integration
 class TestAsyncLocalModelIntegration:
@@ -25,9 +37,11 @@ class TestAsyncLocalModelIntegration:
 
     @pytest.fixture
     def check_deps(self):
-        """Skip if dependencies not installed."""
+        """Skip if dependencies not installed or model can't load."""
         if not REAL_DEPS_AVAILABLE:
             pytest.skip("sentence-transformers or torch not installed")
+        if not LOCAL_MODEL_WORKS:
+            pytest.skip("local model failed to load (requires Python 3.10+)")
 
     @pytest.mark.asyncio
     async def test_seamless_async_local_embedding(self, check_deps):

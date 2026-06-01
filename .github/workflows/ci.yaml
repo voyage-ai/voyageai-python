@@ -45,14 +45,13 @@ jobs:
       run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Local model tests with local dependencies but no API key
-  # Requires Python 3.10+ because the HuggingFace model code uses 3.10+ syntax
   local-model-tests:
     name: Local Model Tests
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -81,14 +80,13 @@ jobs:
       run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Full integration tests with API key and all dependencies
-  # Requires Python 3.10+ for local model deps (HuggingFace model uses 3.10+ syntax)
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     env:
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
     steps:
