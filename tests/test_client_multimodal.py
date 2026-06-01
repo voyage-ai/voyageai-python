@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import math
-import os
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import List
@@ -11,10 +10,6 @@ import voyageai
 import voyageai.error as error
 from PIL import Image
 from voyageai.video_utils import Video
-
-requires_api_key = pytest.mark.skipif(
-    not os.environ.get("VOYAGE_API_KEY"), reason="VOYAGE_API_KEY not set"
-)
 
 
 def cosine_similarity(a: List[float], b: List[float]) -> float:
@@ -160,7 +155,6 @@ sample_input_invalid_text_01 = {
 }
 
 
-@requires_api_key
 @pytest.mark.parametrize("client_type", ["sync", "async"])
 class TestClient:
     @pytest.mark.parametrize(
