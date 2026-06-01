@@ -200,14 +200,10 @@ class _BaseClient(ABC):
 
             for segment in item.content:
                 if isinstance(segment, MultimodalInputSegmentImageURL):
-                    raise InvalidRequestError(
-                        "count_usage does not support image URL segments."
-                    )
+                    raise InvalidRequestError("count_usage does not support image URL segments.")
 
                 elif isinstance(segment, MultimodalInputSegmentVideoURL):
-                    raise InvalidRequestError(
-                        "count_usage does not support video URL segments."
-                    )
+                    raise InvalidRequestError("count_usage does not support video URL segments.")
 
                 elif isinstance(segment, MultimodalInputSegmentImageBase64):
                     try:
@@ -221,9 +217,7 @@ class _BaseClient(ABC):
                         image_tokens += this_image_pixels // pixel_to_token_ratio
 
                     except Exception as e:
-                        raise InvalidRequestError(
-                            f"Unable to process base64 image: {e}"
-                        )
+                        raise InvalidRequestError(f"Unable to process base64 image: {e}")
 
                 elif isinstance(segment, MultimodalInputSegmentVideoBase64):
                     try:
@@ -234,9 +228,7 @@ class _BaseClient(ABC):
                         video_tokens += video.estimated_num_tokens
 
                     except Exception as e:
-                        raise InvalidRequestError(
-                            f"Unable to process base64 video: {e}"
-                        )
+                        raise InvalidRequestError(f"Unable to process base64 video: {e}")
 
                 elif isinstance(segment, MultimodalInputSegmentText):
                     text_segments += segment.text
