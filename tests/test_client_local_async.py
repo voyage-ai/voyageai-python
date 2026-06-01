@@ -73,7 +73,9 @@ class TestAsyncLocalModelIntegration:
             result = await client.embed(
                 ["Test text"], model="voyage-4-nano", input_type="document", output_dimension=dim
             )
-            assert len(result.embeddings[0]) == dim, f"Expected {dim}, got {len(result.embeddings[0])}"
+            assert len(result.embeddings[0]) == dim, (
+                f"Expected {dim}, got {len(result.embeddings[0])}"
+            )
 
     @pytest.mark.asyncio
     async def test_async_query_vs_document(self, check_deps):
@@ -82,8 +84,12 @@ class TestAsyncLocalModelIntegration:
 
         client = AsyncClient()
 
-        query_result = await client.embed(["What is AI?"], model="voyage-4-nano", input_type="query")
-        doc_result = await client.embed(["What is AI?"], model="voyage-4-nano", input_type="document")
+        query_result = await client.embed(
+            ["What is AI?"], model="voyage-4-nano", input_type="query"
+        )
+        doc_result = await client.embed(
+            ["What is AI?"], model="voyage-4-nano", input_type="document"
+        )
 
         assert query_result.embeddings[0] != doc_result.embeddings[0]
 
@@ -98,4 +104,3 @@ class TestAsyncLocalModelIntegration:
             ["First", "Second", "Third"], model="voyage-4-nano", input_type="document"
         )
         assert len(result.embeddings) == 3
-

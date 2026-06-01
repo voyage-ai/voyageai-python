@@ -69,7 +69,9 @@ class TestLocalModelIntegration:
             result = client.embed(
                 ["Test text"], model="voyage-4-nano", input_type="document", output_dimension=dim
             )
-            assert len(result.embeddings[0]) == dim, f"Expected {dim}, got {len(result.embeddings[0])}"
+            assert len(result.embeddings[0]) == dim, (
+                f"Expected {dim}, got {len(result.embeddings[0])}"
+            )
 
     def test_float32_dtype(self, check_deps):
         """Test float32 output data type (default)."""
@@ -77,7 +79,9 @@ class TestLocalModelIntegration:
 
         client = Client()
 
-        result = client.embed(["Test"], model="voyage-4-nano", input_type="document", output_dtype="float32")
+        result = client.embed(
+            ["Test"], model="voyage-4-nano", input_type="document", output_dtype="float32"
+        )
         assert isinstance(result.embeddings[0][0], float)
 
     def test_query_vs_document_different(self, check_deps):
@@ -86,8 +90,12 @@ class TestLocalModelIntegration:
 
         client = Client()
 
-        query_result = client.embed(["What is machine learning?"], model="voyage-4-nano", input_type="query")
-        doc_result = client.embed(["What is machine learning?"], model="voyage-4-nano", input_type="document")
+        query_result = client.embed(
+            ["What is machine learning?"], model="voyage-4-nano", input_type="query"
+        )
+        doc_result = client.embed(
+            ["What is machine learning?"], model="voyage-4-nano", input_type="document"
+        )
 
         # Embeddings should be different due to different prompts
         assert query_result.embeddings[0] != doc_result.embeddings[0]
