@@ -130,12 +130,15 @@ class _BaseClient(ABC):
     @abstractmethod
     def contextualized_embed(
         self,
-        inputs: List[List[str]],
+        inputs: Union[List[List[str]], List[str]],
         model: str,
         input_type: Optional[str] = None,
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
+        enable_auto_chunking: bool = False,
+        chunk_size: Optional[int] = None,
+        chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
         pass
 
