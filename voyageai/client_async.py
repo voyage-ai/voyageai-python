@@ -12,7 +12,10 @@ from tenacity import (
 import voyageai
 import voyageai.error as error
 from voyageai._base import _BaseClient
-from voyageai.chunking import apply_chunking
+from voyageai.chunking import (
+    apply_chunking,
+    validate_and_normalize_contextualized_inputs,
+)
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
     EmbeddingsObject,
@@ -93,24 +96,39 @@ class AsyncClient(_BaseClient):
 
     async def contextualized_embed(
         self,
-        inputs: List[List[str]],
+        inputs: Union[List[List[str]], List[str]],
         model: str,
         input_type: Optional[str] = None,
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
         chunk_fn: Optional[Callable[[str], List[str]]] = None,
+        enable_auto_chunking: bool = False,
+        chunk_size: Optional[int] = None,
+        chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
+        normalized_inputs, extra_kwargs = validate_and_normalize_contextualized_inputs(
+            inputs=inputs,
+            input_type=input_type,
+            chunk_fn=chunk_fn,
+            enable_auto_chunking=enable_auto_chunking,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+
+        request_inputs = (
+            apply_chunking(normalized_inputs, chunk_fn) if chunk_fn else normalized_inputs
+        )
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
-                if chunk_fn:
-                    inputs = apply_chunking(inputs, chunk_fn)
                 response = await voyageai.ContextualizedEmbedding.acreate(
-                    inputs=inputs,
+                    inputs=request_inputs,
                     model=model,
                     input_type=input_type,
                     output_dtype=output_dtype,
                     output_dimension=output_dimension,
+                    **extra_kwargs,
                     **self._params,
                 )
 
@@ -120,7 +138,7 @@ class AsyncClient(_BaseClient):
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
                 response=response,
-                chunk_texts=inputs,
+                chunk_texts=request_inputs,
             )
         return ContextualizedEmbeddingsObject(response)
 
