@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.4.0"
+version = "0.4.1"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
+license = {file = "LICENSE"}
 readme = "README.md"
 
 [tool.poetry.dependencies]
