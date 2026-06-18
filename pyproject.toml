@@ -3,7 +3,7 @@ name = "voyageai"
 version = "0.4.1"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
-license = {file = "LICENSE"}
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
