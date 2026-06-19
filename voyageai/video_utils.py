@@ -188,7 +188,7 @@ def _ensure_ffmpeg_available() -> None:
     if ffmpeg is None:
         raise ImportError(
             "The 'ffmpeg-python' package is required for video optimization. "
-            "Install it with: pip install voyageai[video] "
+            "Install it with: pip install 'voyageai[video]' "
             "and ensure `ffmpeg` is available on PATH."
         )
     if shutil.which("ffmpeg") is None:
