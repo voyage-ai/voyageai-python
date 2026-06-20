@@ -1,6 +1,6 @@
 import asyncio
 import warnings
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 from PIL.Image import Image
 from tenacity import (
@@ -17,7 +17,7 @@ from voyageai.chunking import (
     apply_chunking,
     validate_and_normalize_contextualized_inputs,
 )
-from voyageai.local.model_registry import SUPPORTED_MODELS as LOCAL_MODELS
+from voyageai.local.helpers import embed_local, is_local_model
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
     EmbeddingsObject,
@@ -26,9 +26,6 @@ from voyageai.object import (
 )
 from voyageai.object.multimodal_embeddings import MultimodalInputRequest
 from voyageai.video_utils import Video
-
-if TYPE_CHECKING:
-    from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
 
 
 class AsyncClient(_BaseClient):
@@ -49,7 +46,6 @@ class AsyncClient(_BaseClient):
         base_url: Optional[str] = None,
     ) -> None:
         super().__init__(api_key, max_retries, timeout, base_url)
-        self._local_backends: Dict[str, "SentenceTransformerBackend"] = {}
 
     def _make_retry_controller(self) -> AsyncRetrying:
         return AsyncRetrying(
@@ -61,62 +57,6 @@ class AsyncClient(_BaseClient):
                 | retry_if_exception_type(error.ServiceUnavailableError)
                 | retry_if_exception_type(error.Timeout)
             ),
-        )
-
-    def _get_local_backend(self, model: str) -> "SentenceTransformerBackend":
-        """Get or create a local backend for the given model."""
-        if model not in self._local_backends:
-            from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
-
-            self._local_backends[model] = SentenceTransformerBackend(model)
-        return self._local_backends[model]
-
-    def _embed_local_sync(
-        self,
-        texts: List[str],
-        model: str,
-        input_type: Optional[str] = None,
-        truncation: bool = True,
-        output_dtype: Optional[str] = None,
-        output_dimension: Optional[int] = None,
-    ) -> EmbeddingsObject:
-        """Generate embeddings using a local model (sync, for use with to_thread)."""
-        backend = self._get_local_backend(model)
-
-        embeddings_array = backend.encode(
-            texts=texts,
-            input_type=input_type,
-            output_dtype=output_dtype,
-            output_dimension=output_dimension,
-            truncation=truncation,
-        )
-
-        total_tokens = backend.count_tokens(texts)
-
-        result = EmbeddingsObject()
-        result.embeddings = embeddings_array.tolist()
-        result.total_tokens = total_tokens
-
-        return result
-
-    async def _embed_local(
-        self,
-        texts: List[str],
-        model: str,
-        input_type: Optional[str] = None,
-        truncation: bool = True,
-        output_dtype: Optional[str] = None,
-        output_dimension: Optional[int] = None,
-    ) -> EmbeddingsObject:
-        """Generate embeddings using a local model (async)."""
-        return await asyncio.to_thread(
-            self._embed_local_sync,
-            texts=texts,
-            model=model,
-            input_type=input_type,
-            truncation=truncation,
-            output_dtype=output_dtype,
-            output_dimension=output_dimension,
         )
 
     async def embed(
@@ -138,8 +78,9 @@ class AsyncClient(_BaseClient):
             )
 
         # Check if this is a local model
-        if model in LOCAL_MODELS:
-            return await self._embed_local(
+        if is_local_model(model):
+            return await asyncio.to_thread(
+                embed_local,
                 texts=texts,
                 model=model,
                 input_type=input_type,

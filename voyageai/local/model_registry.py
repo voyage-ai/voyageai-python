@@ -66,7 +66,7 @@ SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
         max_tokens=32768,
         default_dimension=2048,
         supported_dimensions=(2048, 1024, 512, 256),
-        supported_precisions=("float32", "int8", "uint8", "binary", "ubinary"),
+        supported_precisions=("float32", "float", "int8", "uint8", "binary", "ubinary"),
         trust_remote_code=True,
     ),
 }
@@ -140,6 +140,8 @@ class ModelCache:
     def get_or_load(self, key: str, loader: callable) -> Any:
         """Get a cached model or load it if not cached.
 
+        Thread-safe: holds the lock for the full check-load-store sequence.
+
         Args:
             key: Cache key.
             loader: Callable to load the model if not cached.
@@ -147,8 +149,9 @@ class ModelCache:
         Returns:
             The cached or newly loaded model.
         """
-        model = self.get(key)
-        if model is None:
-            model = loader()
-            self.set(key, model)
-        return model
+        with self._cache_lock:
+            model = self._cache.get(key)
+            if model is None:
+                model = loader()
+                self._cache[key] = model
+            return model
