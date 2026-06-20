@@ -5,15 +5,11 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 import PIL.Image
 import PIL.ImageFile
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from voyageai import error
 from voyageai.api_resources import VoyageResponse
 from voyageai.video_utils import Video
-
-try:
-    from pydantic import BaseModel, Extra, Field, ValidationError
-except ImportError:
-    from pydantic.v1 import BaseModel, Extra, Field, ValidationError
 
 
 class MultimodalEmbeddingsObject:
@@ -47,43 +43,38 @@ class MultimodalInputSegmentType(str, Enum):
 
 
 class MultimodalInputSegmentText(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.TEXT] = MultimodalInputSegmentType.TEXT
     text: str
 
-    class Config:
-        extra = Extra.forbid
-
 
 class MultimodalInputSegmentImageURL(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.IMAGE_URL] = MultimodalInputSegmentType.IMAGE_URL
     image_url: str
 
-    class Config:
-        extra = Extra.forbid
-
 
 class MultimodalInputSegmentImageBase64(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.IMAGE_BASE64] = MultimodalInputSegmentType.IMAGE_BASE64
     image_base64: str
 
-    class Config:
-        extra = Extra.forbid
-
 
 class MultimodalInputSegmentVideoURL(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.VIDEO_URL] = MultimodalInputSegmentType.VIDEO_URL
     video_url: str
 
-    class Config:
-        extra = Extra.forbid
-
 
 class MultimodalInputSegmentVideoBase64(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal[MultimodalInputSegmentType.VIDEO_BASE64] = MultimodalInputSegmentType.VIDEO_BASE64
     video_base64: str
-
-    class Config:
-        extra = Extra.forbid
 
 
 class MultimodalInput(BaseModel):
@@ -98,7 +89,7 @@ class MultimodalInput(BaseModel):
             ],
             Field(discriminator="type"),
         ]
-    ] = Field(..., min_items=1)
+    ] = Field(..., min_length=1)
 
 
 class MultimodalInputRequest(BaseModel):
@@ -195,7 +186,7 @@ class MultimodalInputRequest(BaseModel):
             raise ValueError(f"Input at index {idx} is missing the 'content' field.")
 
         try:
-            return MultimodalInput.parse_obj(input_data)
+            return MultimodalInput.model_validate(input_data)
         except ValidationError as ve:
             raise ValueError(f"Validation error for input at index {idx}: {ve}") from ve
 
