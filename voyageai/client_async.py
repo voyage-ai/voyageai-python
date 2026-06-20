@@ -209,7 +209,7 @@ class AsyncClient(_BaseClient):
                         truncation=truncation,
                         output_dtype=output_dtype,
                         output_dimension=output_dimension,
-                    ).dict(),
+                    ).model_dump(),
                     **self._params,
                 )
         if response is None:

@@ -39,8 +39,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y ffmpeg
         ffmpeg -version
-    - name: Install package (without local extras)
-      run: $POETRY_HOME/bin/poetry install
+    - name: Install package (with video extra, without local extras)
+      run: $POETRY_HOME/bin/poetry install --extras video
     - name: Run unit tests (no API key, no local deps)
       run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
 
@@ -74,8 +74,8 @@ jobs:
         ffmpeg -version
     - name: Install OpenBLAS (needed for scipy build on 3.13+)
       run: sudo apt-get install -y libopenblas-dev
-    - name: Install package with local extras
-      run: $POETRY_HOME/bin/poetry install --extras local
+    - name: Install package with all extras
+      run: $POETRY_HOME/bin/poetry install --extras "video local"
     - name: Run local model tests (no API key)
       run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
 
@@ -111,7 +111,7 @@ jobs:
         ffmpeg -version
     - name: Install OpenBLAS (needed for scipy build on 3.13+)
       run: sudo apt-get install -y libopenblas-dev
-    - name: Install package with local extras
-      run: $POETRY_HOME/bin/poetry install --extras local
+    - name: Install package with all extras
+      run: $POETRY_HOME/bin/poetry install --extras "video local"
     - name: Run all tests
       run: $POETRY_HOME/bin/poetry run pytest
