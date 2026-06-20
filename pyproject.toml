@@ -20,7 +20,10 @@ pillow = "*"
 pydantic = ">=2.7.4"
 tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
-ffmpeg-python = "*"
+ffmpeg-python = {version = "*", optional = true}
+
+[tool.poetry.extras]
+video = ["ffmpeg-python"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
