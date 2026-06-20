@@ -36,19 +36,6 @@ from voyageai.embeddings_utils import (
 )
 from voyageai.version import VERSION
 
-
-def _is_ffmpeg_available() -> bool:
-    """Check if ffmpeg-python is installed."""
-    try:
-        import ffmpeg  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
-
-
-HAS_VIDEO = _is_ffmpeg_available()
-
 if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession
