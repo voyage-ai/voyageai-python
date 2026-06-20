@@ -760,3 +760,200 @@ class TestMakeSessionProxy:
             s.close()
         finally:
             voyageai.proxy = original
+
+
+# ---------------------------------------------------------------------------
+# video_utils — ffmpeg integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestVideoUtilsIntegration:
+    EXAMPLE_VIDEO = "tests/example_video_01.mp4"
+
+    def test_probe_video(self):
+        from voyageai.video_utils import _probe_video
+
+        meta = _probe_video(self.EXAMPLE_VIDEO)
+        assert meta["width"] > 0
+        assert meta["height"] > 0
+        assert meta["duration"] > 0
+
+    def test_compute_basic_usage_for_path(self):
+        from voyageai.video_utils import _compute_basic_usage_for_path
+
+        num_pixels, num_frames, _ = _compute_basic_usage_for_path(
+            self.EXAMPLE_VIDEO, model="voyage-multimodal-3.5"
+        )
+        assert num_pixels is not None and num_pixels > 0
+        assert num_frames is not None and num_frames > 0
+
+    def test_compute_basic_usage_for_path_bad_file(self):
+        from voyageai.video_utils import _compute_basic_usage_for_path
+
+        assert _compute_basic_usage_for_path("/nonexistent.mp4", model="x") == (None, None, None)
+
+    def test_get_video_token_config(self):
+        from voyageai.video_utils import _get_video_token_config
+
+        config = _get_video_token_config("voyage-multimodal-3.5")
+        if config is not None:
+            assert all(v > 0 for v in config)
+
+    def test_get_video_token_config_bad_model(self):
+        from voyageai.video_utils import _get_video_token_config
+
+        assert _get_video_token_config("nonexistent-model-xyz") is None
+
+    def test_ensure_ffmpeg_available(self):
+        from voyageai.video_utils import _ensure_ffmpeg_available
+
+        _ensure_ffmpeg_available()
+
+    def test_video_from_file_no_optimize(self):
+        from voyageai.video_utils import Video
+
+        with open(self.EXAMPLE_VIDEO, "rb") as f:
+            v = Video.from_file(f, model="voyage-multimodal-3.5", optimize=False)
+        assert not v.optimized
+        assert len(v.to_bytes()) > 0
+        assert v.num_pixels is not None
+
+    def test_optimize_video_from_path(self):
+        from voyageai.video_utils import optimize_video
+
+        r = optimize_video(self.EXAMPLE_VIDEO, model="voyage-multimodal-3.5", max_video_tokens=4000)
+        assert r.optimized and len(r.to_bytes()) > 0
+
+    def test_optimize_video_from_bytes(self):
+        from voyageai.video_utils import optimize_video
+
+        with open(self.EXAMPLE_VIDEO, "rb") as f:
+            data = f.read()
+        assert optimize_video(data, model="voyage-multimodal-3.5", max_video_tokens=4000).optimized
+
+    def test_optimize_video_from_video_object(self):
+        from voyageai.video_utils import Video, optimize_video
+
+        v = Video.from_path(self.EXAMPLE_VIDEO, model="voyage-multimodal-3.5", optimize=False)
+        assert optimize_video(v, model="voyage-multimodal-3.5", max_video_tokens=4000).optimized
+
+    def test_optimize_video_no_resize(self):
+        from voyageai.video_utils import optimize_video
+
+        r = optimize_video(
+            self.EXAMPLE_VIDEO,
+            model="voyage-multimodal-3.5",
+            resize=False,
+            downsample_fps=False,
+        )
+        assert r.optimized
+
+    def test_optimize_video_unsupported_type(self):
+        from voyageai.video_utils import optimize_video
+
+        with pytest.raises(TypeError, match="Unsupported"):
+            optimize_video(12345, model="test")
+
+
+# ---------------------------------------------------------------------------
+# video_utils — error path tests (mocked)
+# ---------------------------------------------------------------------------
+
+
+class TestVideoUtilsErrorPaths:
+    def test_ensure_ffmpeg_no_package(self):
+        from voyageai import video_utils
+
+        original = video_utils.ffmpeg
+        try:
+            video_utils.ffmpeg = None
+            with pytest.raises(ImportError, match="ffmpeg-python"):
+                video_utils._ensure_ffmpeg_available()
+        finally:
+            video_utils.ffmpeg = original
+
+    def test_ensure_ffmpeg_not_on_path(self):
+        with patch("shutil.which", return_value=None):
+            from voyageai.video_utils import _ensure_ffmpeg_available
+
+            with pytest.raises(EnvironmentError, match="not found on PATH"):
+                _ensure_ffmpeg_available()
+
+    def test_ensure_ffmpeg_execution_fails(self):
+        with (
+            patch("shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.run", side_effect=OSError("exec failed")),
+        ):
+            from voyageai.video_utils import _ensure_ffmpeg_available
+
+            with pytest.raises(EnvironmentError, match="Failed to execute"):
+                _ensure_ffmpeg_available()
+
+    def test_probe_video_no_video_stream(self):
+        fake_probe = {"streams": [{"codec_type": "audio"}], "format": {}}
+        with patch("ffmpeg.probe", return_value=fake_probe):
+            from voyageai.video_utils import _probe_video
+
+            with pytest.raises(ValueError, match="No video stream"):
+                _probe_video("fake.mp4")
+
+    def test_compute_basic_usage_zero_fps(self):
+        with patch(
+            "voyageai.video_utils._probe_video",
+            return_value={"width": 640, "height": 480, "r_frame_rate": "0/0", "duration": 2.0},
+        ):
+            from voyageai.video_utils import _compute_basic_usage_for_path
+
+            assert _compute_basic_usage_for_path("f.mp4", model="x") == (None, None, None)
+
+    def test_compute_basic_usage_zero_duration(self):
+        with patch(
+            "voyageai.video_utils._probe_video",
+            return_value={"width": 640, "height": 480, "r_frame_rate": "30/1", "duration": 0.0},
+        ):
+            from voyageai.video_utils import _compute_basic_usage_for_path
+
+            assert _compute_basic_usage_for_path("f.mp4", model="x") == (None, None, None)
+
+    def test_compute_basic_usage_no_video_config(self):
+        with (
+            patch(
+                "voyageai.video_utils._probe_video",
+                return_value={
+                    "width": 640,
+                    "height": 480,
+                    "r_frame_rate": "30/1",
+                    "duration": 1.0,
+                },
+            ),
+            patch("voyageai.video_utils._get_video_token_config", return_value=None),
+        ):
+            from voyageai.video_utils import _compute_basic_usage_for_path
+
+            num_pixels, num_frames, estimated_tokens = _compute_basic_usage_for_path(
+                "f.mp4", model="x"
+            )
+            assert num_pixels is not None and num_pixels > 0
+            assert num_frames is not None
+            assert estimated_tokens is None
+
+
+# ---------------------------------------------------------------------------
+# _base — _get_client_config
+# ---------------------------------------------------------------------------
+
+
+class TestBaseClientConfig:
+    def test_get_client_config_valid(self):
+        from voyageai._base import _get_client_config
+
+        config = _get_client_config("voyage-multimodal-3.5")
+        assert isinstance(config, dict)
+        assert "multimodal_image_pixels_min" in config
+
+    def test_get_client_config_invalid_model(self):
+        from voyageai._base import _get_client_config
+
+        with pytest.warns(match="Failed to load"):
+            with pytest.raises(Exception):
+                _get_client_config("nonexistent-model-xyz-12345")
