@@ -16,6 +16,7 @@ from voyageai.chunking import (
     apply_chunking,
     validate_and_normalize_contextualized_inputs,
 )
+from voyageai.local.helpers import embed_local, is_local_model
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
     EmbeddingsObject,
@@ -30,7 +31,7 @@ class Client(_BaseClient):
     """Voyage AI Client
 
     Args:
-        api_key (str): Your API key.
+        api_key (str): Your API key (not required for local models).
         max_retries (int): Maximum number of retries if API call fails.
         timeout (float): Timeout in seconds.
         base_url (str): Base URL for the API endpoint.
@@ -73,6 +74,24 @@ class Client(_BaseClient):
                 "It will be a required argument in the future. We recommend to specify the model when using this "
                 "function. Please see https://docs.voyageai.com/docs/embeddings for the list of latest models "
                 "provided by Voyage AI."
+            )
+
+        # Check if this is a local model
+        if is_local_model(model):
+            return embed_local(
+                texts=texts,
+                model=model,
+                input_type=input_type,
+                truncation=truncation,
+                output_dtype=output_dtype,
+                output_dimension=output_dimension,
+            )
+
+        # API models require an API key
+        if not self.api_key:
+            raise error.AuthenticationError(
+                "An API key is required for API-based models. "
+                "Set your API key via VOYAGE_API_KEY environment variable or pass it to Client(api_key=...)."
             )
 
         response = None

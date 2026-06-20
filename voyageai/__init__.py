@@ -36,6 +36,37 @@ from voyageai.embeddings_utils import (
 )
 from voyageai.version import VERSION
 
+
+def _is_local_available() -> bool:
+    """Check if sentence-transformers and torch are installed (lazy, no eager import)."""
+    from voyageai.local import _is_local_available as _check
+
+    return _check()
+
+
+class _LazyLocalFlag:
+    """Descriptor that defers the local-availability check until first access."""
+
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def __get__(self, obj, objtype=None):
+        return _is_local_available()
+
+
+class _Module:
+    HAS_LOCAL = _LazyLocalFlag()
+
+
+_module_proxy = _Module()
+
+
+def __getattr__(name: str):
+    if name == "HAS_LOCAL":
+        return _module_proxy.HAS_LOCAL
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession
