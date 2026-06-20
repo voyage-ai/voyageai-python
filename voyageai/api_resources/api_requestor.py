@@ -172,17 +172,11 @@ class APIRequestor:
                 request_timeout=request_timeout,
             )
             resp = await self._interpret_async_response(result)
-        except Exception:
-            # Close the request before exiting session context.
+            return resp
+        finally:
             if result is not None:
                 result.release()
             await ctx.__aexit__(None, None, None)
-            raise
-
-        # Close the request before exiting session context.
-        result.release()
-        await ctx.__aexit__(None, None, None)
-        return resp
 
     def request_headers(self, method: str, extra, request_id: Optional[str]) -> Dict[str, str]:
         user_agent = "Voyage/v1 PythonBindings/%s" % (version.VERSION,)
