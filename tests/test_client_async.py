@@ -585,55 +585,70 @@ class TestAsyncClient:
 
 
 class TestAsyncCancellationCleanup:
-    """Verify that asyncio.CancelledError does not leak an aiohttp.ClientSession."""
+    """Verify that asyncio.CancelledError does not leak an aiohttp.ClientSession.
+
+    Each test injects a controlled session via ``voyageai.aiosession`` so that
+    no real ``aiohttp.ClientSession`` is created during the test.  The
+    cancellation test is the load-bearing one that distinguishes the buggy
+    (``except Exception``) path from the fixed (``except BaseException``) path;
+    the exception and success tests verify cleanup in the remaining branches for
+    completeness.
+    """
 
     @pytest.mark.asyncio
     async def test_arequest_cleans_up_session_on_cancellation(self):
         requestor = APIRequestor(key="dummy")
+        mock_session = AsyncMock()
+        token = voyageai.aiosession.set(mock_session)
 
         mock_exit = AsyncMock()
-        original_aenter = AioHTTPSession.__aenter__
-
-        async def patched_aenter(self_session):
-            session = await original_aenter(self_session)
-            return session
 
         async def slow_arequest_raw(*args, **kwargs):
             await asyncio.sleep(3600)
 
-        with (
-            patch.object(requestor, "arequest_raw", side_effect=slow_arequest_raw),
-            patch.object(AioHTTPSession, "__aexit__", mock_exit),
-        ):
-            task = asyncio.create_task(requestor.arequest("POST", "/test", params={}))
-            await asyncio.sleep(0.05)
-            task.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await task
+        try:
+            with (
+                patch.object(requestor, "arequest_raw", side_effect=slow_arequest_raw),
+                patch.object(AioHTTPSession, "__aexit__", mock_exit),
+            ):
+                task = asyncio.create_task(requestor.arequest("POST", "/test", params={}))
+                await asyncio.sleep(0.05)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+        finally:
+            voyageai.aiosession.reset(token)
 
         mock_exit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_arequest_cleans_up_session_on_exception(self):
         requestor = APIRequestor(key="dummy")
+        mock_session = AsyncMock()
+        token = voyageai.aiosession.set(mock_session)
 
         mock_exit = AsyncMock()
 
         async def failing_arequest_raw(*args, **kwargs):
             raise ValueError("boom")
 
-        with (
-            patch.object(requestor, "arequest_raw", side_effect=failing_arequest_raw),
-            patch.object(AioHTTPSession, "__aexit__", mock_exit),
-        ):
-            with pytest.raises(ValueError, match="boom"):
-                await requestor.arequest("POST", "/test", params={})
+        try:
+            with (
+                patch.object(requestor, "arequest_raw", side_effect=failing_arequest_raw),
+                patch.object(AioHTTPSession, "__aexit__", mock_exit),
+            ):
+                with pytest.raises(ValueError, match="boom"):
+                    await requestor.arequest("POST", "/test", params={})
+        finally:
+            voyageai.aiosession.reset(token)
 
         mock_exit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_arequest_cleans_up_session_on_success(self):
         requestor = APIRequestor(key="dummy")
+        mock_session = AsyncMock()
+        token = voyageai.aiosession.set(mock_session)
 
         mock_exit = AsyncMock()
         mock_response = AsyncMock()
@@ -645,10 +660,13 @@ class TestAsyncCancellationCleanup:
         async def ok_arequest_raw(*args, **kwargs):
             return mock_response
 
-        with (
-            patch.object(requestor, "arequest_raw", side_effect=ok_arequest_raw),
-            patch.object(AioHTTPSession, "__aexit__", mock_exit),
-        ):
-            await requestor.arequest("POST", "/test", params={})
+        try:
+            with (
+                patch.object(requestor, "arequest_raw", side_effect=ok_arequest_raw),
+                patch.object(AioHTTPSession, "__aexit__", mock_exit),
+            ):
+                await requestor.arequest("POST", "/test", params={})
+        finally:
+            voyageai.aiosession.reset(token)
 
         mock_exit.assert_awaited_once()
