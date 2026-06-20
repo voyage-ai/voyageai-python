@@ -42,12 +42,18 @@ class TestLocalModelSupport:
     @pytest.mark.skipif(REAL_DEPS_AVAILABLE, reason="Only run when deps not installed")
     def test_import_error_when_deps_missing(self):
         """Test helpful error message when sentence-transformers not installed."""
+        import sys
+
         from voyageai.local import _ensure_local_deps
 
         with pytest.raises(ImportError) as exc_info:
             _ensure_local_deps()
 
-        assert "pip install voyageai[local]" in str(exc_info.value)
+        msg = str(exc_info.value)
+        if sys.version_info < (3, 10):
+            assert "Python 3.10 or later" in msg
+        else:
+            assert "pip install voyageai[local]" in msg
 
     def test_has_local_constant(self):
         """Test HAS_LOCAL reflects dependency availability via independent check."""
