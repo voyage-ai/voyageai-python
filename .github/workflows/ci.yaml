@@ -40,5 +40,11 @@ jobs:
         ffmpeg -version
     - name: Install package (including video extra for multimodal tests)
       run: $POETRY_HOME/bin/poetry install --extras video
-    - name: Run tests
-      run: $POETRY_HOME/bin/poetry run pytest
+    - name: Run tests with coverage
+      run: $POETRY_HOME/bin/poetry run pytest --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=90
+    - name: Upload coverage report
+      if: matrix.python-version == '3.12'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml
