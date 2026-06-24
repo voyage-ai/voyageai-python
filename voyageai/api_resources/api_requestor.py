@@ -24,6 +24,25 @@ TIMEOUT_SECS = 600
 MAX_SESSION_LIFETIME_SECS = 180
 MAX_CONNECTION_RETRIES = 2
 
+_ALLOWED_HEADERS = frozenset(
+    {
+        "Authorization",
+        "Content-Type",
+        "User-Agent",
+        "X-Voyage-Client-User-Agent",
+        "X-Request-Id",
+        "Voyage-Debug",
+        "X-VoyageAI-Lang",
+        "X-VoyageAI-Package",
+        "X-VoyageAI-Package-Version",
+        "X-VoyageAI-Runtime",
+        "X-VoyageAI-Runtime-Version",
+        "X-VoyageAI-OS",
+        "X-VoyageAI-Wrapper",
+        "X-VoyageAI-Telemetry-Version",
+    }
+)
+
 # Has one attribute per thread, 'session'.
 _thread_context = threading.local()
 
@@ -211,7 +230,7 @@ class APIRequestor:
             headers["Voyage-Debug"] = "true"
         headers.update(extra)
         for key in list(headers.keys()):
-            if key not in ["Authorization", "Content-Type"]:
+            if key not in _ALLOWED_HEADERS:
                 headers.pop(key)
         return headers
 
