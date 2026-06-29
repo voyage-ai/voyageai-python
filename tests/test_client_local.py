@@ -3,7 +3,6 @@
 import importlib.util
 
 import pytest
-
 from voyageai.error import InvalidRequestError
 
 
