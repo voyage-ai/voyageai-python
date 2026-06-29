@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+from voyageai.error import InvalidRequestError
 from voyageai.local import _ensure_local_deps
 from voyageai.local.model_registry import ModelCache, get_model_config
 
@@ -107,20 +108,27 @@ class SentenceTransformerBackend:
             Tuple of (numpy array of embeddings, total token count).
 
         Raises:
-            ValueError: If input_type is not one of None/"query"/"document".
-            NotImplementedError: If output_dtype is int8/uint8 (see
-                DTYPE_TO_PRECISION for why these are unsupported locally).
+            InvalidRequestError: If input_type/output_dtype/output_dimension is
+                invalid. Mirrors the hosted API's validation so callers can
+                catch the same exception on both paths.
+            NotImplementedError: If output_dtype is int8/uint8. These are valid
+                against the hosted API but unsupported locally because they
+                require fixed calibration ranges we don't ship yet — a genuine
+                capability gap rather than an invalid request (see
+                DTYPE_TO_PRECISION).
         """
         # Reject invalid input_type up front. The hosted API raises for unknown
         # values; without this the unknown value would silently fall through to
         # the no-prompt branch and degrade embedding quality.
         if input_type not in _VALID_INPUT_TYPES:
-            raise ValueError(
-                f"Invalid input_type {input_type!r}. " f"Use 'query', 'document', or None."
+            raise InvalidRequestError(
+                f"Invalid input_type {input_type!r}. Use 'query', 'document', or None."
             )
 
         # int8/uint8 need fixed calibration ranges to match the API; reject
-        # rather than return non-deterministic, incomparable vectors.
+        # rather than return non-deterministic, incomparable vectors. This is a
+        # local capability gap (the API accepts them), so NotImplementedError —
+        # not InvalidRequestError — is the honest signal.
         if output_dtype in _UNSUPPORTED_QUANTIZED_DTYPES:
             raise NotImplementedError(
                 f"output_dtype={output_dtype!r} is not supported for local models. "

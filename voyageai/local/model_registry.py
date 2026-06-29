@@ -4,6 +4,8 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from voyageai.error import InvalidRequestError
+
 
 @dataclass(frozen=True)
 class LocalModelConfig:
@@ -26,12 +28,13 @@ class LocalModelConfig:
             The dimension to use.
 
         Raises:
-            ValueError: If dimension is not supported.
+            InvalidRequestError: If dimension is not supported. Matches the
+                hosted API, which rejects invalid output_dimension the same way.
         """
         if dimension is None:
             return self.default_dimension
         if dimension not in self.supported_dimensions:
-            raise ValueError(
+            raise InvalidRequestError(
                 f"Invalid output_dimension {dimension}. "
                 f"Supported dimensions: {self.supported_dimensions}"
             )
@@ -47,12 +50,13 @@ class LocalModelConfig:
             The precision to use.
 
         Raises:
-            ValueError: If precision is not supported.
+            InvalidRequestError: If precision is not supported. Matches the
+                hosted API, which rejects invalid output_dtype the same way.
         """
         if precision is None:
             return None
         if precision not in self.supported_precisions:
-            raise ValueError(
+            raise InvalidRequestError(
                 f"Invalid output_dtype '{precision}'. "
                 f"Supported dtypes: {self.supported_precisions}"
             )

@@ -4,6 +4,8 @@ import importlib.util
 
 import pytest
 
+from voyageai.error import InvalidRequestError
+
 
 def _real_deps_available() -> bool:
     """Check if sentence-transformers and torch can be found (without importing)."""
@@ -156,23 +158,23 @@ class TestLocalModelIntegration:
             assert len(emb) == 2048
 
     def test_invalid_dimension_raises_error(self):
-        """Test invalid dimension raises ValueError."""
+        """Invalid dimension raises InvalidRequestError, matching the hosted API."""
         from voyageai import Client
 
         client = Client()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             client.embed(["test"], model="voyage-4-nano", output_dimension=999)
 
         assert "Invalid output_dimension" in str(exc_info.value)
 
     def test_invalid_dtype_raises_error(self):
-        """Test invalid dtype raises ValueError."""
+        """Invalid dtype raises InvalidRequestError, matching the hosted API."""
         from voyageai import Client
 
         client = Client()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             client.embed(["test"], model="voyage-4-nano", output_dtype="invalid")
 
         assert "Invalid output_dtype" in str(exc_info.value)
@@ -195,7 +197,7 @@ class TestLocalModelIntegration:
 
         client = Client()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(InvalidRequestError) as exc_info:
             client.embed(["test"], model="voyage-4-nano", input_type="doc")
 
         assert "Invalid input_type" in str(exc_info.value)
