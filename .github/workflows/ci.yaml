@@ -38,7 +38,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y ffmpeg
         ffmpeg -version
-    - name: Install package
-      run: $POETRY_HOME/bin/poetry install
+    - name: Install package (including video extra for multimodal tests)
+      run: $POETRY_HOME/bin/poetry install --extras video
     - name: Run tests
       run: $POETRY_HOME/bin/poetry run pytest

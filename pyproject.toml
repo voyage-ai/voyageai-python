@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "voyageai"
-version = "0.3.8"
+version = "0.4.1"
 description = ""
 authors = ["Yujie Qian <yujieq@voyageai.com>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -16,10 +17,13 @@ numpy = [
 ]
 aiolimiter = "*"
 pillow = "*"
-pydantic = ">=1.10.8"
+pydantic = ">=2.7.4"
 tokenizers = ">=0.14.0"
 langchain-text-splitters = ">=0.3.8"
-ffmpeg-python = "*"
+ffmpeg-python = {version = "*", optional = true}
+
+[tool.poetry.extras]
+video = ["ffmpeg-python"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
