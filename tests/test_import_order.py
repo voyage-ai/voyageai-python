@@ -15,7 +15,6 @@ import subprocess
 import sys
 
 import pytest
-
 import voyageai
 
 # Modules that previously evaluated ``voyageai.error.X`` via late-binding

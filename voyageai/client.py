@@ -10,16 +10,16 @@ from tenacity import (
 )
 
 import voyageai
+from voyageai._base import _BaseClient
+from voyageai.chunking import (
+    apply_chunking,
+    validate_and_normalize_contextualized_inputs,
+)
 from voyageai.error import (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout,
-)
-from voyageai._base import _BaseClient
-from voyageai.chunking import (
-    apply_chunking,
-    validate_and_normalize_contextualized_inputs,
 )
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
