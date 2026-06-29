@@ -109,9 +109,7 @@ class _BaseClient(ABC):
     @staticmethod
     def _validate_wrapper_field(field: str, value: str) -> str:
         if not isinstance(value, str):
-            raise ValueError(
-                f"Wrapper {field} must be a string, got {type(value).__name__}."
-            )
+            raise ValueError(f"Wrapper {field} must be a string, got {type(value).__name__}.")
         stripped = value.strip()
         if not stripped:
             raise ValueError(f"Wrapper {field} must be a non-empty string.")

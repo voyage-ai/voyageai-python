@@ -2,7 +2,6 @@ import platform
 from unittest.mock import patch
 
 import pytest
-
 import voyageai
 from voyageai._base import _build_metadata_headers
 from voyageai.version import VERSION
