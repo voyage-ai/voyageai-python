@@ -41,9 +41,16 @@ jobs:
     - name: Install package (including video extra for multimodal tests)
       run: $POETRY_HOME/bin/poetry install --extras video
     - name: Run tests with coverage
-      run: $POETRY_HOME/bin/poetry run pytest --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=90
-    - name: Upload coverage report
+      run: $POETRY_HOME/bin/poetry run pytest --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
+    - name: Enforce coverage threshold
+      # Gate once, on a single canonical version, instead of redundantly on
+      # every matrix entry. Threshold tracks the coverage this PR achieves.
       if: matrix.python-version == '3.12'
+      run: $POETRY_HOME/bin/poetry run coverage report --fail-under=93
+    - name: Upload coverage report
+      # always() so the report is still uploaded when the threshold gate fails,
+      # which is exactly when it's most useful for diagnosis.
+      if: always() && matrix.python-version == '3.12'
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report

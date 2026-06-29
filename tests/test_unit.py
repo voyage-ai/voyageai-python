@@ -6,7 +6,9 @@ and exercise pure logic, error handling, and edge cases.
 
 import copy
 import json
+import logging
 import pickle
+import shutil
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -198,14 +200,15 @@ class TestVoyageError:
         e = error.VoyageError(None)
         assert str(e) == "<empty message>"
 
-    def test_construct_error_object_with_error_dict_raises(self):
-        # error_object module referenced in construct_error_object doesn't exist,
-        # so constructing with a json_body containing "error" dict raises
-        with pytest.raises(AttributeError):
-            error.VoyageError(
-                "msg",
-                json_body={"error": {"message": "bad request", "type": "invalid"}},
-            )
+    def test_construct_error_object_with_error_dict(self):
+        # A structured {"error": {...}} body is parsed into an attribute-access
+        # object so callers can read e.error.message / e.error.type.
+        e = error.VoyageError(
+            "msg",
+            json_body={"error": {"message": "bad request", "type": "invalid"}},
+        )
+        assert e.error.message == "bad request"
+        assert e.error.type == "invalid"
 
     def test_construct_error_object_without_error_key(self):
         e = error.VoyageError("msg", json_body={"detail": "something"})
@@ -252,16 +255,22 @@ class TestUtil:
         result = util.logfmt({"key": 42})
         assert "key=42" in result
 
-    def test_log_debug(self):
+    def test_log_debug(self, capsys):
         with patch("voyageai.util._console_log_level", return_value="debug"):
             util.log_debug("test message", extra="param")
+        err = capsys.readouterr().err
+        assert "extra=param" in err
+        assert "test message" in err
 
-    def test_log_info(self):
+    def test_log_info(self, capsys):
         with patch("voyageai.util._console_log_level", return_value="info"):
-            util.log_info("test message")
+            util.log_info("hello")
+        assert "message=hello" in capsys.readouterr().err
 
-    def test_log_warn(self):
-        util.log_warn("test warning")
+    def test_log_warn(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="voyage"):
+            util.log_warn("test warning")
+        assert "test warning" in caplog.text
 
     def test_console_log_level_from_module(self):
         original = voyageai.log
@@ -766,7 +775,18 @@ class TestMakeSessionProxy:
 # video_utils — ffmpeg integration tests
 # ---------------------------------------------------------------------------
 
+# These exercise the real ffmpeg binary and the optional `ffmpeg-python`
+# package (the `[video]` extra). Skip the whole class when either is missing so
+# the suite stays runnable without the extra installed instead of erroring.
+_FFMPEG_AVAILABLE = (
+    voyageai.video_utils.ffmpeg is not None and shutil.which("ffmpeg") is not None
+)
 
+
+@pytest.mark.skipif(
+    not _FFMPEG_AVAILABLE,
+    reason="requires ffmpeg on PATH and the voyageai[video] extra",
+)
 class TestVideoUtilsIntegration:
     EXAMPLE_VIDEO = "tests/example_video_01.mp4"
 
@@ -796,8 +816,8 @@ class TestVideoUtilsIntegration:
         from voyageai.video_utils import _get_video_token_config
 
         config = _get_video_token_config("voyage-multimodal-3.5")
-        if config is not None:
-            assert all(v > 0 for v in config)
+        assert config is not None
+        assert all(v > 0 for v in config)
 
     def test_get_video_token_config_bad_model(self):
         from voyageai.video_utils import _get_video_token_config
@@ -807,7 +827,9 @@ class TestVideoUtilsIntegration:
     def test_ensure_ffmpeg_available(self):
         from voyageai.video_utils import _ensure_ffmpeg_available
 
-        _ensure_ffmpeg_available()
+        # Positive path: with ffmpeg present (guaranteed by the class skipif),
+        # the check must pass without raising and return None.
+        assert _ensure_ffmpeg_available() is None
 
     def test_video_from_file_no_optimize(self):
         from voyageai.video_utils import Video
