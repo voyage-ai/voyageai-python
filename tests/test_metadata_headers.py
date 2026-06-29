@@ -1,6 +1,8 @@
 import platform
 from unittest.mock import patch
 
+import pytest
+
 import voyageai
 from voyageai._base import _build_metadata_headers
 from voyageai.version import VERSION
@@ -79,6 +81,28 @@ class TestAppendClientMetadata:
         client.append_client_metadata(name="mem0", version="1.2.3")
         assert client._metadata_headers["X-VoyageAI-Wrapper"] == "mem0/1.2.3|langchain/0.1.0"
 
+    @pytest.mark.parametrize(
+        "name,version",
+        [
+            ("mem0\r\nX-Evil", "1.0"),  # CRLF injection attempt
+            ("mem0", "1.0\nInjected: yes"),
+            ("mem0|other", "1.0"),  # reserved list delimiter
+            ("mem0/x", "1.0"),  # reserved name/version delimiter
+            ("", "1.0"),  # empty name
+            ("mem0", "   "),  # blank version
+        ],
+    )
+    def test_invalid_wrapper_fields_rejected(self, name, version):
+        client = self._make_client()
+        with pytest.raises(ValueError):
+            client.append_client_metadata(name=name, version=version)
+        assert "X-VoyageAI-Wrapper" not in client._metadata_headers
+
+    def test_wrapper_fields_are_trimmed(self):
+        client = self._make_client()
+        client.append_client_metadata(name="  mem0  ", version=" 1.2.3 ")
+        assert client._metadata_headers["X-VoyageAI-Wrapper"] == "mem0/1.2.3"
+
 
 class TestHeadersFlowToRequest:
     def test_metadata_headers_sent_on_wire(self, monkeypatch):
@@ -134,3 +158,71 @@ class TestHeadersFlowToRequest:
 
         assert "X-Evil-Header" not in captured_headers
         assert "X-VoyageAI-Lang" in captured_headers
+
+    def test_app_info_preserved_in_user_agent(self, monkeypatch):
+        captured_headers = {}
+
+        class FakeResponse:
+            status_code = 200
+            headers = {"Content-Type": "application/json"}
+            content = b'{"data": [{"embedding": [0.1]}], "usage": {"total_tokens": 5}}'
+
+        def fake_request(self, method, url, **kwargs):
+            captured_headers.update(kwargs.get("headers", {}))
+            return FakeResponse()
+
+        import requests
+
+        monkeypatch.setattr(requests.Session, "request", fake_request)
+        monkeypatch.setattr(
+            voyageai, "app_info", {"name": "myapp", "version": "2.0", "url": "https://example.com"}
+        )
+
+        client = voyageai.Client(api_key="test-key")
+        client.embed(texts=["hello"], model="voyage-2")
+
+        # The metadata User-Agent must still carry app_info (it isn't dropped
+        # when the metadata headers are merged), and exactly once.
+        ua = captured_headers["User-Agent"]
+        assert f"voyageai-python/{VERSION}" in ua
+        assert "myapp/2.0 (https://example.com)" in ua
+        assert ua.count("myapp/2.0") == 1
+
+
+class TestAsyncHeadersFlowToRequest:
+    @pytest.mark.asyncio
+    async def test_metadata_headers_sent_on_wire_async(self, monkeypatch):
+        captured_headers = {}
+
+        class FakeAioResponse:
+            status = 200
+            headers = {"Content-Type": "application/json"}
+            content = b'{"data": [{"embedding": [0.1]}], "usage": {"total_tokens": 5}}'
+
+            async def read(self):
+                return self.content
+
+            def release(self):
+                return None
+
+        async def fake_request(self, **kwargs):
+            captured_headers.update(kwargs.get("headers") or {})
+            return FakeAioResponse()
+
+        import aiohttp
+
+        monkeypatch.setattr(aiohttp.ClientSession, "request", fake_request)
+
+        client = voyageai.AsyncClient(api_key="test-key")
+        client.append_client_metadata(name="testlib", version="0.1.0")
+        await client.embed(texts=["hello"], model="voyage-2")
+
+        assert captured_headers["X-VoyageAI-Lang"] == "python"
+        assert captured_headers["X-VoyageAI-Package"] == "voyageai"
+        assert captured_headers["X-VoyageAI-Package-Version"] == VERSION
+        assert captured_headers["X-VoyageAI-Runtime"] == platform.python_implementation()
+        assert captured_headers["X-VoyageAI-OS"] == platform.system()
+        assert captured_headers["X-VoyageAI-Wrapper"] == "testlib/0.1.0"
+        assert captured_headers["X-VoyageAI-Telemetry-Version"] == "1"
+        assert f"voyageai-python/{VERSION}" in captured_headers["User-Agent"]
+        assert captured_headers["Authorization"] == "Bearer test-key"

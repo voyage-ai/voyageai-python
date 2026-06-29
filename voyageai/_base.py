@@ -34,10 +34,11 @@ def _build_metadata_headers() -> Dict[str, str]:
     }
     try:
         from voyageai.version import VERSION
-
-        headers["X-VoyageAI-Package-Version"] = VERSION
     except Exception:
-        pass
+        VERSION = None
+
+    if VERSION:
+        headers["X-VoyageAI-Package-Version"] = VERSION
     try:
         headers["X-VoyageAI-Runtime"] = platform.python_implementation()
         headers["X-VoyageAI-Runtime-Version"] = platform.python_version()
@@ -48,10 +49,8 @@ def _build_metadata_headers() -> Dict[str, str]:
     except Exception:
         pass
     try:
-        from voyageai.version import VERSION
-
         ua_parts = [
-            f"voyageai-python/{VERSION}",
+            f"voyageai-python/{VERSION}" if VERSION else "voyageai-python",
             f"Python/{platform.python_version()}",
             f"{platform.system()}/{platform.machine()}",
         ]
@@ -107,7 +106,29 @@ class _BaseClient(ABC):
             "headers": self._metadata_headers,
         }
 
+    @staticmethod
+    def _validate_wrapper_field(field: str, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError(
+                f"Wrapper {field} must be a string, got {type(value).__name__}."
+            )
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError(f"Wrapper {field} must be a non-empty string.")
+        # Reject control characters (header-injection risk) and the "|"/"/"
+        # delimiters used to encode the wrapper list.
+        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in stripped) or set("|/") & set(stripped):
+            raise ValueError(
+                f"Wrapper {field} {value!r} contains invalid characters "
+                "(control characters or the reserved '|' / '/' delimiters)."
+            )
+        return stripped
+
     def append_client_metadata(self, name: str, version: str) -> None:
+        """Record an integration wrapper (e.g. a framework that embeds this
+        client) in the X-VoyageAI-Wrapper header."""
+        name = self._validate_wrapper_field("name", name)
+        version = self._validate_wrapper_field("version", version)
         wrapper_value = f"{name}/{version}"
         current = self._metadata_headers.get("X-VoyageAI-Wrapper", "")
         existing = [w for w in current.split("|") if w] if current else []
