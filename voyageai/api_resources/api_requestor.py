@@ -24,6 +24,25 @@ TIMEOUT_SECS = 600
 MAX_SESSION_LIFETIME_SECS = 180
 MAX_CONNECTION_RETRIES = 2
 
+_ALLOWED_HEADERS = frozenset(
+    {
+        "Authorization",
+        "Content-Type",
+        "User-Agent",
+        "X-Voyage-Client-User-Agent",
+        "X-Request-Id",
+        "Voyage-Debug",
+        "X-VoyageAI-Lang",
+        "X-VoyageAI-Package",
+        "X-VoyageAI-Package-Version",
+        "X-VoyageAI-Runtime",
+        "X-VoyageAI-Runtime-Version",
+        "X-VoyageAI-OS",
+        "X-VoyageAI-Wrapper",
+        "X-VoyageAI-Telemetry-Version",
+    }
+)
+
 # Has one attribute per thread, 'session'.
 _thread_context = threading.local()
 
@@ -178,10 +197,26 @@ class APIRequestor:
                 result.release()
             await ctx.__aexit__(None, None, None)
 
+    @staticmethod
+    def format_app_info(info) -> str:
+        """Render voyageai.app_info for the User-Agent string.
+
+        Accepts either a plain string or a dict with "name" and optional
+        "version"/"url" keys.
+        """
+        if isinstance(info, str):
+            return info
+        formatted = info.get("name", "")
+        if info.get("version"):
+            formatted += "/%s" % (info["version"],)
+        if info.get("url"):
+            formatted += " (%s)" % (info["url"],)
+        return formatted
+
     def request_headers(self, method: str, extra, request_id: Optional[str]) -> Dict[str, str]:
+        # app_info is appended after the metadata headers are merged in (below),
+        # so a custom User-Agent doesn't drop it.
         user_agent = "Voyage/v1 PythonBindings/%s" % (version.VERSION,)
-        if voyageai.app_info:
-            user_agent += " " + self.format_app_info(voyageai.app_info)
 
         uname_without_node = " ".join(
             v for k, v in platform.uname()._asdict().items() if k != "node"
@@ -210,8 +245,12 @@ class APIRequestor:
         if voyageai.debug:
             headers["Voyage-Debug"] = "true"
         headers.update(extra)
+        # Re-apply app_info after merging client metadata headers so a custom
+        # User-Agent (e.g. the X-VoyageAI metadata UA) keeps carrying it.
+        if voyageai.app_info and headers.get("User-Agent"):
+            headers["User-Agent"] += " " + self.format_app_info(voyageai.app_info)
         for key in list(headers.keys()):
-            if key not in ["Authorization", "Content-Type"]:
+            if key not in _ALLOWED_HEADERS:
                 headers.pop(key)
         return headers
 

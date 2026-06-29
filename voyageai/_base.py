@@ -2,6 +2,7 @@ import base64
 import functools
 import io
 import json
+import platform
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -23,6 +24,40 @@ from voyageai.object.multimodal_embeddings import (
 )
 from voyageai.util import default_api_key, get_default_base_url
 from voyageai.video_utils import Video
+
+
+def _build_metadata_headers() -> Dict[str, str]:
+    headers: Dict[str, str] = {
+        "X-VoyageAI-Lang": "python",
+        "X-VoyageAI-Package": "voyageai",
+        "X-VoyageAI-Telemetry-Version": "1",
+    }
+    try:
+        from voyageai.version import VERSION
+    except Exception:
+        VERSION = None
+
+    if VERSION:
+        headers["X-VoyageAI-Package-Version"] = VERSION
+    try:
+        headers["X-VoyageAI-Runtime"] = platform.python_implementation()
+        headers["X-VoyageAI-Runtime-Version"] = platform.python_version()
+    except Exception:
+        pass
+    try:
+        headers["X-VoyageAI-OS"] = platform.system()
+    except Exception:
+        pass
+    try:
+        ua_parts = [
+            f"voyageai-python/{VERSION}" if VERSION else "voyageai-python",
+            f"Python/{platform.python_version()}",
+            f"{platform.system()}/{platform.machine()}",
+        ]
+        headers["User-Agent"] = " ".join(ua_parts)
+    except Exception:
+        pass
+    return headers
 
 
 def _get_client_config(
@@ -63,11 +98,41 @@ class _BaseClient(ABC):
         self.max_retries = max_retries
         base_url = base_url or get_default_base_url(self.api_key)
 
+        self._metadata_headers = _build_metadata_headers()
         self._params = {
             "api_key": self.api_key,
             "request_timeout": timeout,
             "base_url": base_url,
+            "headers": self._metadata_headers,
         }
+
+    @staticmethod
+    def _validate_wrapper_field(field: str, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError(f"Wrapper {field} must be a string, got {type(value).__name__}.")
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError(f"Wrapper {field} must be a non-empty string.")
+        # Reject control characters (header-injection risk) and the "|"/"/"
+        # delimiters used to encode the wrapper list.
+        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in stripped) or set("|/") & set(stripped):
+            raise ValueError(
+                f"Wrapper {field} {value!r} contains invalid characters "
+                "(control characters or the reserved '|' / '/' delimiters)."
+            )
+        return stripped
+
+    def append_client_metadata(self, name: str, version: str) -> None:
+        """Record an integration wrapper (e.g. a framework that embeds this
+        client) in the X-VoyageAI-Wrapper header."""
+        name = self._validate_wrapper_field("name", name)
+        version = self._validate_wrapper_field("version", version)
+        wrapper_value = f"{name}/{version}"
+        current = self._metadata_headers.get("X-VoyageAI-Wrapper", "")
+        existing = [w for w in current.split("|") if w] if current else []
+        if wrapper_value not in existing:
+            existing.append(wrapper_value)
+            self._metadata_headers["X-VoyageAI-Wrapper"] = "|".join(existing)
 
     @abstractmethod
     def embed(
