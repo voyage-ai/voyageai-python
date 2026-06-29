@@ -66,7 +66,10 @@ SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
         max_tokens=32768,
         default_dimension=2048,
         supported_dimensions=(2048, 1024, 512, 256),
-        supported_precisions=("float32", "float", "int8", "uint8", "binary", "ubinary"),
+        # int8/uint8 omitted: they require fixed calibration ranges to match the
+        # hosted API, which we don't ship locally yet (see encode() in
+        # sentence_transformer_backend.py).
+        supported_precisions=("float32", "float", "binary", "ubinary"),
         trust_remote_code=True,
     ),
 }

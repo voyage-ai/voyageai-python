@@ -1,31 +1,20 @@
 """Tests for async local model support in AsyncClient."""
 
 import asyncio
+import importlib.util
 
 import pytest
 
-# ruff: noqa: F401
 
-# Check if real dependencies are available
-try:
-    import sentence_transformers
-    import torch
+def _real_deps_available() -> bool:
+    """Check if sentence-transformers and torch can be found (without importing)."""
+    return (
+        importlib.util.find_spec("sentence_transformers") is not None
+        and importlib.util.find_spec("torch") is not None
+    )
 
-    REAL_DEPS_AVAILABLE = True
-except ImportError:
-    REAL_DEPS_AVAILABLE = False
 
-# Check if local model can actually load (fails on Python <3.10 due to
-# HuggingFace model code using 3.10+ type union syntax)
-LOCAL_MODEL_WORKS = False
-if REAL_DEPS_AVAILABLE:
-    try:
-        from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
-
-        SentenceTransformerBackend("voyage-4-nano")
-        LOCAL_MODEL_WORKS = True
-    except (TypeError, Exception):
-        pass
+REAL_DEPS_AVAILABLE = _real_deps_available()
 
 
 @pytest.mark.integration
@@ -35,13 +24,25 @@ class TestAsyncLocalModelIntegration:
     Run with: pytest -m integration
     """
 
-    @pytest.fixture
+    @pytest.fixture(scope="session")
     def check_deps(self):
-        """Skip if dependencies not installed or model can't load."""
+        """Skip if dependencies not installed or model can't load.
+
+        Loading happens here (not at import/collection time) and only the
+        documented failure modes are swallowed: a genuinely broken backend
+        (download error, OOM, runtime error) must surface, not turn into a
+        misleading skip.
+        """
         if not REAL_DEPS_AVAILABLE:
             pytest.skip("sentence-transformers or torch not installed")
-        if not LOCAL_MODEL_WORKS:
+        try:
+            from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
+
+            SentenceTransformerBackend("voyage-4-nano")
+        except TypeError:
             pytest.skip("local model failed to load (requires Python 3.10+)")
+        except ImportError:
+            pytest.skip("local model dependencies not available")
 
     @pytest.mark.asyncio
     async def test_seamless_async_local_embedding(self, check_deps):

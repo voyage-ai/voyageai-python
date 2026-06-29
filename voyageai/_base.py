@@ -78,6 +78,21 @@ class _BaseClient(ABC):
             "base_url": base_url,
         }
 
+    def _require_api_key(self) -> None:
+        """Raise a clear error if no API key is configured.
+
+        The client allows a missing key so local models can run without one, but
+        every API-backed method must call this first. Otherwise a keyless call
+        would do its input validation/chunking and then fail late and deep inside
+        the request layer with a less actionable error.
+        """
+        if not self.api_key:
+            raise voyageai.error.AuthenticationError(
+                "An API key is required for API-based models. "
+                "Set your API key via the VOYAGE_API_KEY environment variable or "
+                "pass it to the client (api_key=...)."
+            )
+
     @abstractmethod
     def embed(
         self,

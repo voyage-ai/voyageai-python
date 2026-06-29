@@ -7,15 +7,25 @@ import numpy as np
 from voyageai.local import _ensure_local_deps
 from voyageai.local.model_registry import ModelCache, get_model_config
 
-# Mapping from SDK output_dtype to sentence-transformers precision
+# Mapping from SDK output_dtype to sentence-transformers precision.
+#
+# int8/uint8 are intentionally absent: matching the hosted API requires fixed
+# calibration ranges, which we don't have for local models. Without them
+# sentence-transformers derives the quantization range from the current batch,
+# yielding non-deterministic, API-incompatible vectors — so int8/uint8 are
+# rejected up front in ``encode`` rather than returning silently-wrong output.
 DTYPE_TO_PRECISION = {
     "float32": "float32",
     "float": "float32",
-    "int8": "int8",
-    "uint8": "uint8",
     "binary": "binary",
     "ubinary": "ubinary",
 }
+
+# Output dtypes that require fixed calibration ranges we don't yet ship locally.
+_UNSUPPORTED_QUANTIZED_DTYPES = ("int8", "uint8")
+
+# Valid input_type values (None means no instruction prompt).
+_VALID_INPUT_TYPES = (None, "query", "document")
 
 # Mapping from input_type to the prompt name used by the model
 INPUT_TYPE_TO_PROMPT = {
@@ -89,13 +99,35 @@ class SentenceTransformerBackend:
         Args:
             texts: List of texts to encode.
             input_type: "query", "document", or None.
-            output_dtype: Output data type (float32, float, int8, uint8, binary, ubinary).
+            output_dtype: Output data type (float32, float, binary, ubinary).
             output_dimension: Dimension to truncate embeddings to (MRL support).
             truncation: Whether to truncate texts exceeding max tokens.
 
         Returns:
             Tuple of (numpy array of embeddings, total token count).
+
+        Raises:
+            ValueError: If input_type is not one of None/"query"/"document".
+            NotImplementedError: If output_dtype is int8/uint8 (see
+                DTYPE_TO_PRECISION for why these are unsupported locally).
         """
+        # Reject invalid input_type up front. The hosted API raises for unknown
+        # values; without this the unknown value would silently fall through to
+        # the no-prompt branch and degrade embedding quality.
+        if input_type not in _VALID_INPUT_TYPES:
+            raise ValueError(
+                f"Invalid input_type {input_type!r}. " f"Use 'query', 'document', or None."
+            )
+
+        # int8/uint8 need fixed calibration ranges to match the API; reject
+        # rather than return non-deterministic, incomparable vectors.
+        if output_dtype in _UNSUPPORTED_QUANTIZED_DTYPES:
+            raise NotImplementedError(
+                f"output_dtype={output_dtype!r} is not supported for local models. "
+                "int8/uint8 quantization requires fixed calibration ranges to match "
+                "the hosted API; use 'float'/'float32' or 'binary'/'ubinary'."
+            )
+
         # Validate and get dimension
         dimension = self.config.validate_dimension(output_dimension)
 
@@ -107,7 +139,11 @@ class SentenceTransformerBackend:
         # Build encode kwargs
         encode_kwargs = {}
         if dimension != self.config.default_dimension:
+            # Truncating an already unit-normalized vector (Matryoshka / MRL)
+            # breaks unit norm, so re-normalize to match the API, which returns
+            # unit-norm embeddings at every dimension.
             encode_kwargs["truncate_dim"] = dimension
+            encode_kwargs["normalize_embeddings"] = True
         if precision:
             encode_kwargs["precision"] = precision
 

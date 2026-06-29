@@ -176,3 +176,93 @@ class TestLocalModelIntegration:
             client.embed(["test"], model="voyage-4-nano", output_dtype="invalid")
 
         assert "Invalid output_dtype" in str(exc_info.value)
+
+    def test_bare_string_returns_nested_list(self):
+        """Bare string input must return a list with one embedding, matching the API."""
+        from voyageai import Client
+
+        client = Client()
+
+        result = client.embed("Hello, world!", model="voyage-4-nano", input_type="document")
+
+        assert len(result.embeddings) == 1
+        assert len(result.embeddings[0]) == 2048
+        assert isinstance(result.embeddings[0][0], float)
+
+    def test_invalid_input_type_raises_error(self):
+        """An unknown input_type must raise, not silently degrade to no prompt."""
+        from voyageai import Client
+
+        client = Client()
+
+        with pytest.raises(ValueError) as exc_info:
+            client.embed(["test"], model="voyage-4-nano", input_type="doc")
+
+        assert "Invalid input_type" in str(exc_info.value)
+
+    def test_int8_dtype_not_supported(self):
+        """int8/uint8 require fixed calibration ranges and must be rejected locally."""
+        from voyageai import Client
+
+        client = Client()
+
+        for dtype in ("int8", "uint8"):
+            with pytest.raises(NotImplementedError) as exc_info:
+                client.embed(["test"], model="voyage-4-nano", output_dtype=dtype)
+            assert "calibration ranges" in str(exc_info.value)
+
+    def test_truncated_dimensions_are_unit_norm(self):
+        """Matryoshka-truncated embeddings must stay unit-norm like the API."""
+        import numpy as np
+        from voyageai import Client
+
+        client = Client()
+
+        for dim in [256, 512, 1024, 2048]:
+            result = client.embed(
+                ["Test text"], model="voyage-4-nano", input_type="document", output_dimension=dim
+            )
+            norm = np.linalg.norm(result.embeddings[0])
+            assert norm == pytest.approx(1.0, abs=1e-2), f"dim={dim} not unit-norm (norm={norm})"
+
+
+class TestKeylessApiGate:
+    """A keyless client is allowed (for local models) but every API-backed method
+    must fail fast with a clear AuthenticationError instead of late and deep in
+    the request layer. No model load or network access is required for these.
+    """
+
+    @pytest.fixture
+    def keyless_client(self, monkeypatch):
+        import voyageai
+        from voyageai import Client
+
+        monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
+        monkeypatch.delenv("VOYAGE_API_KEY_PATH", raising=False)
+        monkeypatch.setattr(voyageai, "api_key", None, raising=False)
+        monkeypatch.setattr(voyageai, "api_key_path", None, raising=False)
+        return Client()
+
+    def test_rerank_requires_api_key(self, keyless_client):
+        import voyageai
+
+        with pytest.raises(voyageai.error.AuthenticationError):
+            keyless_client.rerank("q", ["a", "b"], model="rerank-2")
+
+    def test_contextualized_embed_requires_api_key(self, keyless_client):
+        import voyageai
+
+        with pytest.raises(voyageai.error.AuthenticationError):
+            keyless_client.contextualized_embed([["a", "b"]], model="voyage-context-3")
+
+    def test_multimodal_embed_requires_api_key(self, keyless_client):
+        import voyageai
+
+        with pytest.raises(voyageai.error.AuthenticationError):
+            keyless_client.multimodal_embed([["hello"]], model="voyage-multimodal-3")
+
+    def test_embed_requires_api_key_for_api_model(self, keyless_client):
+        import voyageai
+
+        with pytest.raises(voyageai.error.AuthenticationError):
+            keyless_client.embed(["hello"], model="voyage-3")

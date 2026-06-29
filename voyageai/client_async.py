@@ -90,11 +90,7 @@ class AsyncClient(_BaseClient):
             )
 
         # API models require an API key
-        if not self.api_key:
-            raise error.AuthenticationError(
-                "An API key is required for API-based models. "
-                "Set your API key via VOYAGE_API_KEY environment variable or pass it to AsyncClient(api_key=...)."
-            )
+        self._require_api_key()
 
         response = None
         async for attempt in self._make_retry_controller():
@@ -127,6 +123,8 @@ class AsyncClient(_BaseClient):
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
+        self._require_api_key()
+
         normalized_inputs, extra_kwargs = validate_and_normalize_contextualized_inputs(
             inputs=inputs,
             input_type=input_type,
@@ -171,6 +169,8 @@ class AsyncClient(_BaseClient):
         top_k: Optional[int] = None,
         truncation: bool = True,
     ) -> RerankingObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -198,6 +198,8 @@ class AsyncClient(_BaseClient):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> MultimodalEmbeddingsObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:

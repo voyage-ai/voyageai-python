@@ -47,6 +47,12 @@ def embed_local(
     Returns:
         EmbeddingsObject with embeddings and token count.
     """
+    # The API path accepts a bare string and returns a list with one embedding
+    # (embeddings == [[...]]). Normalize here so the local path matches; without
+    # this, encode() would return a 1-D array and embeddings[0] would be a float.
+    if isinstance(texts, str):
+        texts = [texts]
+
     backend = get_local_backend(model)
 
     embeddings_array, total_tokens = backend.encode(
