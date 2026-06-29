@@ -778,9 +778,7 @@ class TestMakeSessionProxy:
 # These exercise the real ffmpeg binary and the optional `ffmpeg-python`
 # package (the `[video]` extra). Skip the whole class when either is missing so
 # the suite stays runnable without the extra installed instead of erroring.
-_FFMPEG_AVAILABLE = (
-    voyageai.video_utils.ffmpeg is not None and shutil.which("ffmpeg") is not None
-)
+_FFMPEG_AVAILABLE = voyageai.video_utils.ffmpeg is not None and shutil.which("ffmpeg") is not None
 
 
 @pytest.mark.skipif(
