@@ -24,10 +24,17 @@ ffmpeg-python = {version = "*", optional = true}
 sentence-transformers = {version = ">=5.0.0", optional = true, python = ">=3.10"}
 torch = {version = ">=2.9.0", optional = true, python = ">=3.10"}
 transformers = {version = ">=4.41.0,<5.0.0", optional = true, python = ">=3.10"}
+# scipy is pulled in transitively by sentence-transformers (via scikit-learn).
+# Pin a modern floor: scipy 1.6.1 declares `Requires-Python: >=3.7` with no
+# upper bound, so the resolver otherwise selects it for 3.13/3.14, where it has
+# no wheels and fails to build from source. 1.14.1 is the first release with
+# cp313 wheels; newer releases cover 3.14. (Only needed for the local extra,
+# which itself requires Python >=3.10.)
+scipy = {version = ">=1.14.1", optional = true, python = ">=3.10"}
 
 [tool.poetry.extras]
 video = ["ffmpeg-python"]
-local = ["sentence-transformers", "torch", "transformers"]
+local = ["sentence-transformers", "torch", "transformers", "scipy"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
