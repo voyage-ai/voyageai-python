@@ -991,9 +991,7 @@ class TestBaseClientConfig:
         fake_response.status_code = 404
         with patch(
             "voyageai._base.hf_hub_download",
-            side_effect=HfHubHTTPError(
-                "404 Client Error: model not found", response=fake_response
-            ),
+            side_effect=HfHubHTTPError("404 Client Error: model not found", response=fake_response),
         ):
             with pytest.warns(match="Failed to load"):
                 with pytest.raises(HfHubHTTPError):
