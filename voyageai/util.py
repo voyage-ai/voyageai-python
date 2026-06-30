@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 import voyageai
+from voyageai.error import AuthenticationError
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
 
@@ -86,7 +87,7 @@ def default_api_key() -> str:
     elif api_key is not None:
         return api_key
     else:
-        raise voyageai.error.AuthenticationError(
+        raise AuthenticationError(
             "No API key provided. You can set your API key in code using 'voyageai.api_key = <API-KEY>', "
             "or set the environment variable VOYAGE_API_KEY=<API-KEY>). If your API key is stored "
             "in a file, you can point the voyageai module at it with 'voyageai.api_key_path = <PATH>', "
