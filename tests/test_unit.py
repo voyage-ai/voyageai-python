@@ -984,10 +984,16 @@ class TestBaseClientConfig:
 
         # Reproduce what HF raises for a missing repo and assert the concrete
         # type _get_client_config re-raises, not a blanket Exception (which would
-        # also pass on an error raised before the code under test).
+        # also pass on an error raised before the code under test). Pass a real
+        # Response so construction works across huggingface_hub versions — newer
+        # releases make `response` a required keyword-only argument.
+        fake_response = requests.Response()
+        fake_response.status_code = 404
         with patch(
             "voyageai._base.hf_hub_download",
-            side_effect=HfHubHTTPError("404 Client Error: model not found"),
+            side_effect=HfHubHTTPError(
+                "404 Client Error: model not found", response=fake_response
+            ),
         ):
             with pytest.warns(match="Failed to load"):
                 with pytest.raises(HfHubHTTPError):
