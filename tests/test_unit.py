@@ -964,16 +964,31 @@ class TestVideoUtilsErrorPaths:
 
 
 class TestBaseClientConfig:
-    def test_get_client_config_valid(self):
+    def test_get_client_config_valid(self, tmp_path):
         from voyageai._base import _get_client_config
 
-        config = _get_client_config("voyage-multimodal-3.5")
+        # Hermetic: patch the HF Hub download so the test never hits the network
+        # (this file's contract is "no external API / mock external deps").
+        config_file = tmp_path / "client_config.json"
+        config_file.write_text(json.dumps({"multimodal_image_pixels_min": 1}))
+
+        with patch("voyageai._base.hf_hub_download", return_value=str(config_file)):
+            config = _get_client_config("voyage-multimodal-3.5")
+
         assert isinstance(config, dict)
         assert "multimodal_image_pixels_min" in config
 
     def test_get_client_config_invalid_model(self):
+        from huggingface_hub.utils import HfHubHTTPError
         from voyageai._base import _get_client_config
 
-        with pytest.warns(match="Failed to load"):
-            with pytest.raises(Exception):
-                _get_client_config("nonexistent-model-xyz-12345")
+        # Reproduce what HF raises for a missing repo and assert the concrete
+        # type _get_client_config re-raises, not a blanket Exception (which would
+        # also pass on an error raised before the code under test).
+        with patch(
+            "voyageai._base.hf_hub_download",
+            side_effect=HfHubHTTPError("404 Client Error: model not found"),
+        ):
+            with pytest.warns(match="Failed to load"):
+                with pytest.raises(HfHubHTTPError):
+                    _get_client_config("nonexistent-model-xyz-12345")
