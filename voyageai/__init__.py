@@ -37,33 +37,14 @@ from voyageai.embeddings_utils import (
 from voyageai.version import VERSION
 
 
-def _is_local_available() -> bool:
-    """Check if sentence-transformers and torch are installed (lazy, no eager import)."""
-    from voyageai.local import _is_local_available as _check
-
-    return _check()
-
-
-class _LazyLocalFlag:
-    """Descriptor that defers the local-availability check until first access."""
-
-    def __set_name__(self, owner, name):
-        self._name = name
-
-    def __get__(self, obj, objtype=None):
-        return _is_local_available()
-
-
-class _Module:
-    HAS_LOCAL = _LazyLocalFlag()
-
-
-_module_proxy = _Module()
-
-
 def __getattr__(name: str):
+    # `HAS_LOCAL` is resolved lazily so that `import voyageai` never imports
+    # torch / sentence-transformers; module-level __getattr__ already provides
+    # exactly this deferral on first attribute access.
     if name == "HAS_LOCAL":
-        return _module_proxy.HAS_LOCAL
+        from voyageai.local import _is_local_available
+
+        return _is_local_available()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

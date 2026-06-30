@@ -1,20 +1,11 @@
 """Tests for local model support in Client."""
 
-import importlib.util
-
 import pytest
 from voyageai.error import InvalidRequestError
 
+from tests._local_test_utils import real_deps_available
 
-def _real_deps_available() -> bool:
-    """Check if sentence-transformers and torch can be found (without importing)."""
-    return (
-        importlib.util.find_spec("sentence_transformers") is not None
-        and importlib.util.find_spec("torch") is not None
-    )
-
-
-REAL_DEPS_AVAILABLE = _real_deps_available()
+REAL_DEPS_AVAILABLE = real_deps_available()
 
 
 @pytest.fixture(scope="session")
@@ -60,7 +51,7 @@ class TestLocalModelSupport:
         """Test HAS_LOCAL reflects dependency availability via independent check."""
         import voyageai
 
-        expected = _real_deps_available()
+        expected = real_deps_available()
         assert voyageai.HAS_LOCAL == expected
 
 

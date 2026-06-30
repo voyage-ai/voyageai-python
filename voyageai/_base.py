@@ -62,8 +62,11 @@ class _BaseClient(ABC):
         # API key is optional - allow None for local-only usage
         try:
             self.api_key = api_key or default_api_key()
-        except voyageai.error.AuthenticationError:
-            # No API key available - that's OK for local models
+        except (voyageai.error.AuthenticationError, OSError):
+            # No usable API key - that's OK for local models. OSError covers a
+            # set-but-stale VOYAGE_API_KEY_PATH pointing at an unreadable file
+            # (default_api_key() opens it, raising FileNotFoundError/OSError),
+            # which should fall back to keyless rather than break construction.
             self.api_key = None
 
         self.max_retries = max_retries

@@ -2,7 +2,7 @@
 
 import threading
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from voyageai.error import InvalidRequestError
 
@@ -112,9 +112,15 @@ class ModelCache:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._cache: Dict[str, Any] = {}
-                    cls._instance._cache_lock = threading.Lock()
+                    # Fully initialize a local instance, then publish it last.
+                    # The outer ``if cls._instance is None`` runs without the
+                    # lock, so a concurrent caller must never be able to observe
+                    # a published-but-half-built instance (one missing _cache /
+                    # _cache_lock) and crash dereferencing them.
+                    instance = super().__new__(cls)
+                    instance._cache = {}
+                    instance._cache_lock = threading.Lock()
+                    cls._instance = instance
         return cls._instance
 
     def get(self, key: str) -> Optional[Any]:
@@ -144,7 +150,7 @@ class ModelCache:
         with self._cache_lock:
             self._cache.clear()
 
-    def get_or_load(self, key: str, loader: callable) -> Any:
+    def get_or_load(self, key: str, loader: Callable[[], Any]) -> Any:
         """Get a cached model or load it if not cached.
 
         Thread-safe: holds the lock for the full check-load-store sequence.

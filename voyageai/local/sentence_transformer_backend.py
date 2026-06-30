@@ -144,14 +144,15 @@ class SentenceTransformerBackend:
         if precision:
             precision = DTYPE_TO_PRECISION[precision]
 
-        # Build encode kwargs
-        encode_kwargs = {}
+        # Build encode kwargs. Always normalize: the API returns unit-norm
+        # embeddings at every dimension, and truncating a unit-normalized vector
+        # (Matryoshka / MRL) breaks unit norm, so truncated and full-dim outputs
+        # must both be re-normalized. Setting this unconditionally (rather than
+        # only on the truncated branch) makes full-dim norm an explicit
+        # guarantee instead of relying on the model self-normalizing.
+        encode_kwargs = {"normalize_embeddings": True}
         if dimension != self.config.default_dimension:
-            # Truncating an already unit-normalized vector (Matryoshka / MRL)
-            # breaks unit norm, so re-normalize to match the API, which returns
-            # unit-norm embeddings at every dimension.
             encode_kwargs["truncate_dim"] = dimension
-            encode_kwargs["normalize_embeddings"] = True
         if precision:
             encode_kwargs["precision"] = precision
 
@@ -170,12 +171,15 @@ class SentenceTransformerBackend:
             embeddings = self.model.encode(texts, **encode_kwargs)
 
         # Count tokens accounting for instruction prefix
-        total_tokens = self._count_tokens_with_prefix(texts, input_type)
+        total_tokens = self.count_tokens(texts, input_type)
 
         return embeddings, total_tokens
 
-    def _count_tokens_with_prefix(self, texts: List[str], input_type: Optional[str] = None) -> int:
-        """Count total tokens across all texts, including instruction prefix.
+    def count_tokens(self, texts: List[str], input_type: Optional[str] = None) -> int:
+        """Count total tokens across all texts, including the instruction prefix.
+
+        The model prepends an instruction prompt for query/document inputs and
+        tokenizes it too, so the prefix is counted to match server-side usage.
 
         Args:
             texts: List of texts to count tokens for.
@@ -191,15 +195,3 @@ class SentenceTransformerBackend:
             encoded = self._tokenizer.encode(full_text, add_special_tokens=True)
             total += len(encoded)
         return total
-
-    def count_tokens(self, texts: List[str], input_type: Optional[str] = None) -> int:
-        """Count total tokens across all texts.
-
-        Args:
-            texts: List of texts to count tokens for.
-            input_type: "query", "document", or None.
-
-        Returns:
-            Total token count.
-        """
-        return self._count_tokens_with_prefix(texts, input_type)

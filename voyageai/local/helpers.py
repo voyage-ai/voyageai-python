@@ -12,14 +12,16 @@ if TYPE_CHECKING:
 def get_local_backend(model: str) -> "SentenceTransformerBackend":
     """Create a local backend for the given model.
 
-    Uses the global ModelCache singleton for caching, so no per-client cache
-    is needed.
+    A fresh SentenceTransformerBackend wrapper is constructed on every call;
+    only the heavy underlying SentenceTransformer model is cached (process-wide,
+    keyed by model:device, via the ModelCache singleton). The per-call wrapper
+    cost is small, so no per-client backend cache is needed.
 
     Args:
         model: Model name (must be in LOCAL_MODELS).
 
     Returns:
-        SentenceTransformerBackend instance (cached via ModelCache singleton).
+        A SentenceTransformerBackend wrapping the cached model.
     """
     from voyageai.local.sentence_transformer_backend import SentenceTransformerBackend
 
