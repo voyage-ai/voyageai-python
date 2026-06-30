@@ -85,6 +85,11 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
+      # Run one Python version at a time: every job here hits the live API
+      # (incl. token-heavy voyage-multimodal-3.5), and running the whole matrix
+      # in parallel exceeds the project's per-minute token (TPM) rate limit,
+      # turning real assertions into spurious RateLimitError failures.
+      max-parallel: 1
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     env:

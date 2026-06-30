@@ -10,7 +10,7 @@ import PIL.Image
 from huggingface_hub import hf_hub_download
 
 import voyageai
-from voyageai.error import InvalidRequestError
+from voyageai.error import AuthenticationError, InvalidRequestError
 from voyageai.object import EmbeddingsObject, RerankingObject
 from voyageai.object.contextualized_embeddings import ContextualizedEmbeddingsObject
 from voyageai.object.multimodal_embeddings import (
@@ -63,7 +63,7 @@ class _BaseClient(ABC):
         # API key is optional - allow None for local-only usage
         try:
             self.api_key = api_key or default_api_key()
-        except (voyageai.error.AuthenticationError, OSError):
+        except (AuthenticationError, OSError):
             # No usable API key - that's OK for local models. OSError covers a
             # set-but-stale VOYAGE_API_KEY_PATH pointing at an unreadable file
             # (default_api_key() opens it, raising FileNotFoundError/OSError),
@@ -91,7 +91,7 @@ class _BaseClient(ABC):
         the request layer with a less actionable error.
         """
         if not self.api_key:
-            raise voyageai.error.AuthenticationError(
+            raise AuthenticationError(
                 "An API key is required for API-based models. "
                 "Set your API key via the VOYAGE_API_KEY environment variable or "
                 "pass it to the client (api_key=...)."
