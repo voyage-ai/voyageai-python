@@ -1,6 +1,3 @@
-import voyageai
-
-
 class VoyageError(Exception):
     def __init__(
         self,
@@ -60,9 +57,12 @@ class VoyageError(Exception):
         ):
             return None
 
-        return voyageai.api_resources.error_object.ErrorObject.construct_from(
-            self.json_body["error"]
-        )
+        # Imported lazily to avoid an import cycle: response -> api_requestor ->
+        # error. By construction time the package is fully imported, so this is
+        # safe.
+        from voyageai.api_resources.response import VoyageResponse
+
+        return VoyageResponse.construct_from(self.json_body["error"])
 
 
 class APIError(VoyageError):

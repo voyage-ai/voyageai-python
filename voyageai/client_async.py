@@ -11,11 +11,16 @@ from tenacity import (
 )
 
 import voyageai
-import voyageai.error as error
 from voyageai._base import _BaseClient
 from voyageai.chunking import (
     apply_chunking,
     validate_and_normalize_contextualized_inputs,
+)
+from voyageai.error import (
+    APIConnectionError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
 )
 from voyageai.local.helpers import embed_local, is_local_model
 from voyageai.object import (
@@ -53,9 +58,9 @@ class AsyncClient(_BaseClient):
             stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential_jitter(initial=1, max=16),
             retry=(
-                retry_if_exception_type(error.RateLimitError)
-                | retry_if_exception_type(error.ServiceUnavailableError)
-                | retry_if_exception_type(error.Timeout)
+                retry_if_exception_type(RateLimitError)
+                | retry_if_exception_type(ServiceUnavailableError)
+                | retry_if_exception_type(Timeout)
             ),
         )
 
@@ -106,7 +111,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = EmbeddingsObject(response)
         return result
@@ -152,7 +157,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
@@ -184,7 +189,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = RerankingObject(documents, response)
         return result
@@ -215,7 +220,7 @@ class AsyncClient(_BaseClient):
                     **self._params,
                 )
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = MultimodalEmbeddingsObject(response)
         return result

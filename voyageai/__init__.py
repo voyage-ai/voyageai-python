@@ -25,6 +25,12 @@ from voyageai.api_resources import (
     MultimodalEmbedding,
     Reranking,
 )
+
+# Bind the ``error`` submodule onto the package eagerly and explicitly. Without
+# this, ``voyageai.error`` is only bound as an incidental side effect of another
+# submodule's import, which made late-bound ``voyageai.error.X`` accesses during
+# module load order-dependent and could raise AttributeError (issue #42).
+from voyageai import error
 from voyageai.chunking import default_chunk_fn
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
