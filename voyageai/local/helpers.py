@@ -1,6 +1,6 @@
 """Shared helpers for local model routing in sync and async clients."""
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from voyageai.error import InvalidRequestError
 from voyageai.local.model_registry import SUPPORTED_MODELS as LOCAL_MODELS
@@ -30,7 +30,7 @@ def get_local_backend(model: str) -> "SentenceTransformerBackend":
 
 
 def embed_local(
-    texts: List[str],
+    texts: Union[str, List[str]],
     model: str,
     input_type: Optional[str] = None,
     truncation: bool = True,
@@ -40,7 +40,8 @@ def embed_local(
     """Generate embeddings using a local model.
 
     Args:
-        texts: List of texts to embed.
+        texts: A single string or a list of strings to embed. A bare string is
+            normalized to a one-element list (matching the hosted API).
         model: Model name.
         input_type: "query", "document", or None.
         truncation: Whether to truncate texts exceeding max tokens.

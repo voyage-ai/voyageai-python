@@ -731,15 +731,22 @@ class TestBaseClient:
         c = voyageai.Client(api_key="test-key-abc")
         assert c.api_key == "test-key-abc"
 
-    def test_client_init_no_key_raises(self):
+    def test_client_init_no_key_is_keyless(self):
+        # Behavior change (local-model support): a missing API key no longer
+        # raises at construction — a keyless Client is allowed so local models
+        # (e.g. voyage-4-nano) can run without one. The key is only required when
+        # an API-backed method is actually called, which still raises
+        # AuthenticationError (here, before any network I/O).
         original_key = voyageai.api_key
         original_path = voyageai.api_key_path
         try:
             voyageai.api_key = None
             voyageai.api_key_path = None
             with patch.dict("os.environ", {}, clear=True):
+                client = voyageai.Client()
+                assert client.api_key is None
                 with pytest.raises(error.AuthenticationError):
-                    voyageai.Client()
+                    client.embed(["hello"], model="voyage-3")
         finally:
             voyageai.api_key = original_key
             voyageai.api_key_path = original_path

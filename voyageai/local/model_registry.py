@@ -6,6 +6,12 @@ from typing import Any, Callable, Dict, Optional
 
 from voyageai.error import InvalidRequestError
 
+# Maximum inputs per embed() call, matching the hosted API's documented list
+# limit (https://docs.voyageai.com/docs/embeddings) so an oversized batch raises
+# the same InvalidRequestError on both the API and local paths. Single source of
+# truth for the default LocalModelConfig.max_batch_size below.
+HOSTED_MAX_BATCH_SIZE = 1000
+
 
 @dataclass(frozen=True)
 class LocalModelConfig:
@@ -17,9 +23,8 @@ class LocalModelConfig:
     supported_dimensions: tuple
     supported_precisions: tuple
     trust_remote_code: bool = True
-    # Max inputs per embed() call. Matches the hosted API's documented list limit
-    # so the same call raises InvalidRequestError on both the API and local paths.
-    max_batch_size: int = 1000
+    # Max inputs per embed() call; see HOSTED_MAX_BATCH_SIZE.
+    max_batch_size: int = HOSTED_MAX_BATCH_SIZE
 
     def validate_dimension(self, dimension: Optional[int]) -> int:
         """Validate and return the dimension to use.
@@ -78,7 +83,7 @@ SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
         # sentence_transformer_backend.py).
         supported_precisions=("float32", "float", "binary", "ubinary"),
         trust_remote_code=True,
-        max_batch_size=1000,
+        # max_batch_size defaults to HOSTED_MAX_BATCH_SIZE (see LocalModelConfig).
     ),
 }
 

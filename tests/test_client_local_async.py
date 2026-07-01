@@ -49,8 +49,15 @@ class TestAsyncLocalModelIntegration:
         assert result.total_tokens > 0
 
     @pytest.mark.asyncio
-    async def test_concurrent_local_embeddings(self, check_deps):
-        """Test concurrent local embedding calls."""
+    async def test_concurrent_local_embeds_return_correct_results(self, check_deps):
+        """Concurrently-dispatched local embeds each return a correct result.
+
+        Note: these are dispatched concurrently (asyncio.gather over
+        asyncio.to_thread), but the per-model inference lock serializes the
+        actual forward passes on the shared cached model — so this verifies
+        correctness under concurrent dispatch, not parallel execution. (A batched
+        encode would be the path to real parallelism if throughput matters.)
+        """
         from voyageai import AsyncClient
 
         client = AsyncClient()
@@ -111,3 +118,54 @@ class TestAsyncLocalModelIntegration:
             ["First", "Second", "Third"], model="voyage-4-nano", input_type="document"
         )
         assert len(result.embeddings) == 3
+
+    @pytest.mark.asyncio
+    async def test_async_invalid_input_type_raises(self, check_deps):
+        """Unknown input_type must raise on the async path too, matching the API."""
+        from voyageai import AsyncClient
+        from voyageai.error import InvalidRequestError
+
+        client = AsyncClient()
+        with pytest.raises(InvalidRequestError):
+            await client.embed(["test"], model="voyage-4-nano", input_type="doc")
+
+    @pytest.mark.asyncio
+    async def test_async_truncation_false_over_length_raises(self, check_deps):
+        """truncation=False on over-length input must raise on the async path too."""
+        from voyageai import AsyncClient
+        from voyageai.error import InvalidRequestError
+
+        client = AsyncClient()
+        long_text = "word " * 40000
+        with pytest.raises(InvalidRequestError):
+            await client.embed([long_text], model="voyage-4-nano", truncation=False)
+
+
+class TestAsyncLocalInputValidation:
+    """Empty / None / oversized-batch input must raise InvalidRequestError on the
+    async path too, matching the sync path and the hosted API. These raise before
+    any model load, so they need no local deps or network."""
+
+    @pytest.mark.asyncio
+    async def test_async_empty_list_raises(self):
+        from voyageai import AsyncClient
+        from voyageai.error import InvalidRequestError
+
+        with pytest.raises(InvalidRequestError):
+            await AsyncClient().embed([], model="voyage-4-nano")
+
+    @pytest.mark.asyncio
+    async def test_async_none_input_raises(self):
+        from voyageai import AsyncClient
+        from voyageai.error import InvalidRequestError
+
+        with pytest.raises(InvalidRequestError):
+            await AsyncClient().embed(None, model="voyage-4-nano")
+
+    @pytest.mark.asyncio
+    async def test_async_batch_over_limit_raises(self):
+        from voyageai import AsyncClient
+        from voyageai.error import InvalidRequestError
+
+        with pytest.raises(InvalidRequestError):
+            await AsyncClient().embed(["x"] * 1001, model="voyage-4-nano")
