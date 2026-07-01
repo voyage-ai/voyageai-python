@@ -179,27 +179,30 @@ class SentenceTransformerBackend:
         if precision:
             encode_kwargs["precision"] = precision
 
-        # Tokenize each input once and reuse the lengths for both the truncation
-        # check and the reported token count (see _token_lengths).
-        token_lengths = self._token_lengths(texts, input_type)
-
-        # When truncation is disabled the hosted API rejects input exceeding the
-        # context length (rather than silently degrading); raise the same
-        # InvalidRequestError instead of feeding an over-length sequence to the
-        # model (which would crash deep inside it or degrade silently).
-        if not truncation:
-            if any(n > self.config.max_tokens for n in token_lengths):
-                raise InvalidRequestError(
-                    f"Input exceeds the {self.config.max_tokens}-token context length "
-                    "and truncation is disabled."
-                )
-            encode_kwargs["processing_kwargs"] = {"text": {"truncation": False}}
-
-        # Route based on input_type using prompt_name. Serialize the forward
-        # pass: SentenceTransformer.encode* isn't contractually thread-safe, and
-        # the async path dispatches concurrent embeds onto worker threads that
-        # share this one cached model.
+        # Serialize ALL access to the shared cached model — both tokenization and
+        # the forward pass. self.model.tokenizer is a Rust-backed HF fast
+        # tokenizer shared process-wide via ModelCache; two async embeds
+        # tokenizing at the same time raise "RuntimeError: Already borrowed".
+        # (An earlier version locked only the forward pass, which just moved the
+        # race onto our own _token_lengths tokenizer call.)
         with self._inference_lock:
+            # Tokenize each input once; reused for the truncation check and the
+            # reported token count (see _token_lengths).
+            token_lengths = self._token_lengths(texts, input_type)
+
+            # When truncation is disabled the hosted API rejects input exceeding
+            # the context length (rather than silently degrading); raise the same
+            # InvalidRequestError instead of feeding an over-length sequence to
+            # the model (which would crash deep inside it or degrade silently).
+            # Raising inside the with-block is fine — the lock releases on except.
+            if not truncation:
+                if any(n > self.config.max_tokens for n in token_lengths):
+                    raise InvalidRequestError(
+                        f"Input exceeds the {self.config.max_tokens}-token context length "
+                        "and truncation is disabled."
+                    )
+                encode_kwargs["processing_kwargs"] = {"text": {"truncation": False}}
+
             if input_type == "query":
                 embeddings = self.model.encode_query(texts, **encode_kwargs)
             elif input_type == "document":
@@ -236,4 +239,9 @@ class SentenceTransformerBackend:
             Total token count.
         """
         cap = self.config.max_tokens
-        return sum(min(n, cap) if truncation else n for n in self._token_lengths(texts, input_type))
+        # Lock: self.model.tokenizer is a Rust-backed HF fast tokenizer shared
+        # process-wide, so a concurrent caller tokenizing at the same time would
+        # raise "RuntimeError: Already borrowed".
+        with self._inference_lock:
+            lengths = self._token_lengths(texts, input_type)
+        return sum(min(n, cap) if truncation else n for n in lengths)

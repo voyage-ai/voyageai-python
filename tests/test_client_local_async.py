@@ -50,28 +50,34 @@ class TestAsyncLocalModelIntegration:
 
     @pytest.mark.asyncio
     async def test_concurrent_local_embeds_return_correct_results(self, check_deps):
-        """Concurrently-dispatched local embeds each return a correct result.
+        """Many concurrently-dispatched local embeds each return a correct result.
 
-        Note: these are dispatched concurrently (asyncio.gather over
-        asyncio.to_thread), but the per-model inference lock serializes the
-        actual forward passes on the shared cached model — so this verifies
-        correctness under concurrent dispatch, not parallel execution. (A batched
-        encode would be the path to real parallelism if throughput matters.)
+        These are dispatched concurrently (asyncio.gather over asyncio.to_thread),
+        but the per-model inference lock serializes ALL access to the shared cached
+        model — both tokenization and the forward pass. This is a regression guard
+        for the "RuntimeError: Already borrowed" race the Rust-backed HF fast
+        tokenizer raises when two threads tokenize at once: with enough contention
+        it reliably fired before the tokenization was moved under the lock. (It
+        verifies correctness under concurrent dispatch, not parallel execution — a
+        batched encode would be the path to real parallelism.)
         """
         from voyageai import AsyncClient
 
         client = AsyncClient()
 
-        texts = [
-            ["First document"],
-            ["Second document"],
-            ["Third document"],
+        # High contention across both routing branches to maximize the chance of
+        # surfacing a tokenizer/model data race if one is reintroduced.
+        tasks = [
+            client.embed(
+                [f"doc {i}"],
+                model="voyage-4-nano",
+                input_type="query" if i % 2 else "document",
+            )
+            for i in range(16)
         ]
-
-        tasks = [client.embed(t, model="voyage-4-nano", input_type="document") for t in texts]
         results = await asyncio.gather(*tasks)
 
-        assert len(results) == 3
+        assert len(results) == 16
         for result in results:
             assert len(result.embeddings) == 1
             assert len(result.embeddings[0]) == 2048
