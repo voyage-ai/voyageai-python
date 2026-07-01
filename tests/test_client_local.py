@@ -217,6 +217,45 @@ class TestLocalModelIntegration:
             norm = np.linalg.norm(result.embeddings[0])
             assert norm == pytest.approx(1.0, abs=1e-2), f"dim={dim} not unit-norm (norm={norm})"
 
+    def test_truncation_false_over_length_raises(self):
+        """truncation=False on over-length input raises InvalidRequestError, matching
+        the hosted API, instead of crashing/degrading inside the model."""
+        from voyageai import Client
+
+        client = Client()
+        long_text = "word " * 40000  # well beyond the 32768-token context limit
+
+        with pytest.raises(InvalidRequestError):
+            client.embed([long_text], model="voyage-4-nano", truncation=False)
+
+    def test_total_tokens_capped_when_truncated(self):
+        """With truncation on, total_tokens reports the processed (capped) count,
+        not the full pre-truncation length, matching the API."""
+        from voyageai import Client
+
+        client = Client()
+        long_text = "word " * 40000
+
+        result = client.embed([long_text], model="voyage-4-nano", truncation=True)
+        assert result.total_tokens <= 32768
+
+
+class TestLocalInputValidation:
+    """Empty / None input must raise InvalidRequestError like the hosted API.
+    These raise before any model load, so they need no local deps or network."""
+
+    def test_empty_list_raises(self):
+        from voyageai import Client
+
+        with pytest.raises(InvalidRequestError):
+            Client().embed([], model="voyage-4-nano")
+
+    def test_none_input_raises(self):
+        from voyageai import Client
+
+        with pytest.raises(InvalidRequestError):
+            Client().embed(None, model="voyage-4-nano")
+
 
 class TestKeylessApiGate:
     """A keyless client is allowed (for local models) but every API-backed method
@@ -258,3 +297,20 @@ class TestKeylessApiGate:
 
         with pytest.raises(voyageai.error.AuthenticationError):
             keyless_client.embed(["hello"], model="voyage-3")
+
+    def test_binary_key_file_falls_back_to_keyless(self, tmp_path, monkeypatch):
+        """A non-UTF-8 VOYAGE_API_KEY_PATH raises UnicodeDecodeError in
+        default_api_key(); construction must tolerate it and fall back to keyless
+        rather than crash."""
+        import voyageai
+        from voyageai import Client
+
+        key_file = tmp_path / "key.bin"
+        key_file.write_bytes(b"\xff\xfe\x00\x01")
+        monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
+        monkeypatch.setattr(voyageai, "api_key", None, raising=False)
+        monkeypatch.setattr(voyageai, "api_key_path", None, raising=False)
+        monkeypatch.setenv("VOYAGE_API_KEY_PATH", str(key_file))
+
+        client = Client()  # must not raise UnicodeDecodeError
+        assert client.api_key is None

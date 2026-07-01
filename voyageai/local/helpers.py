@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
+from voyageai.error import InvalidRequestError
 from voyageai.local.model_registry import SUPPORTED_MODELS as LOCAL_MODELS
 from voyageai.object import EmbeddingsObject
 
@@ -54,6 +55,12 @@ def embed_local(
     # this, encode() would return a 1-D array and embeddings[0] would be a float.
     if isinstance(texts, str):
         texts = [texts]
+
+    # The hosted API rejects empty input; match it so both paths raise the same
+    # error. This also rejects None (``not None`` is True), which would otherwise
+    # crash downstream in encode()/count_tokens() with a TypeError.
+    if not texts:
+        raise InvalidRequestError("inputs must not be empty.")
 
     backend = get_local_backend(model)
 

@@ -70,6 +70,8 @@ class SentenceTransformerBackend:
 
         self.model = cache.get_or_load(cache_key, load_model)
         self._tokenizer = self.model.tokenizer
+        # Serializes forward passes on this shared cached model (see encode()).
+        self._inference_lock = cache.get_inference_lock(cache_key)
 
     def _get_prompt_for_input_type(self, input_type: Optional[str]) -> Optional[str]:
         """Get the instruction prompt for the given input type.
@@ -156,34 +158,56 @@ class SentenceTransformerBackend:
         if precision:
             encode_kwargs["precision"] = precision
 
-        # Wire truncation through to the model via processing_kwargs
+        # Wire truncation through to the model. When truncation is disabled the
+        # hosted API rejects input exceeding the context length (rather than
+        # silently degrading); validate length up front and raise the same
+        # InvalidRequestError instead of feeding an over-length sequence to the
+        # model (which would crash deep inside it or degrade silently).
         if not truncation:
-            encode_kwargs["processing_kwargs"] = {
-                "text": {"truncation": False},
-            }
+            prompt = self._get_prompt_for_input_type(input_type)
+            for text in texts:
+                full_text = f"{prompt}{text}" if prompt else text
+                n = len(self._tokenizer.encode(full_text, add_special_tokens=True))
+                if n > self.config.max_tokens:
+                    raise InvalidRequestError(
+                        f"Input exceeds the {self.config.max_tokens}-token context length "
+                        "and truncation is disabled."
+                    )
+            encode_kwargs["processing_kwargs"] = {"text": {"truncation": False}}
 
-        # Route based on input_type using prompt_name
-        if input_type == "query":
-            embeddings = self.model.encode_query(texts, **encode_kwargs)
-        elif input_type == "document":
-            embeddings = self.model.encode_document(texts, **encode_kwargs)
-        else:
-            embeddings = self.model.encode(texts, **encode_kwargs)
+        # Route based on input_type using prompt_name. Serialize the forward
+        # pass: SentenceTransformer.encode* isn't contractually thread-safe, and
+        # the async path dispatches concurrent embeds onto worker threads that
+        # share this one cached model.
+        with self._inference_lock:
+            if input_type == "query":
+                embeddings = self.model.encode_query(texts, **encode_kwargs)
+            elif input_type == "document":
+                embeddings = self.model.encode_document(texts, **encode_kwargs)
+            else:
+                embeddings = self.model.encode(texts, **encode_kwargs)
 
-        # Count tokens accounting for instruction prefix
-        total_tokens = self.count_tokens(texts, input_type)
+        # Count tokens accounting for instruction prefix (and truncation cap)
+        total_tokens = self.count_tokens(texts, input_type, truncation)
 
         return embeddings, total_tokens
 
-    def count_tokens(self, texts: List[str], input_type: Optional[str] = None) -> int:
+    def count_tokens(
+        self, texts: List[str], input_type: Optional[str] = None, truncation: bool = True
+    ) -> int:
         """Count total tokens across all texts, including the instruction prefix.
 
         The model prepends an instruction prompt for query/document inputs and
         tokenizes it too, so the prefix is counted to match server-side usage.
+        When ``truncation`` is enabled the model only processes the first
+        ``max_tokens`` tokens of an over-length input, so each text's count is
+        capped there — reporting the *processed* token count, as the API does,
+        rather than the full pre-truncation length.
 
         Args:
             texts: List of texts to count tokens for.
             input_type: "query", "document", or None.
+            truncation: Whether over-length inputs are truncated to max_tokens.
 
         Returns:
             Total token count.
@@ -192,6 +216,6 @@ class SentenceTransformerBackend:
         total = 0
         for text in texts:
             full_text = f"{prompt}{text}" if prompt else text
-            encoded = self._tokenizer.encode(full_text, add_special_tokens=True)
-            total += len(encoded)
+            n = len(self._tokenizer.encode(full_text, add_special_tokens=True))
+            total += min(n, self.config.max_tokens) if truncation else n
         return total

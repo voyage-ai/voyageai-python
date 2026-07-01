@@ -120,8 +120,24 @@ class ModelCache:
                     instance = super().__new__(cls)
                     instance._cache = {}
                     instance._cache_lock = threading.Lock()
+                    # Per-cache-key locks. ``_load_locks`` serialize cold loads
+                    # of a given key (so loading one model never blocks callers
+                    # of a different, already-cached model); ``_inference_locks``
+                    # serialize forward passes on a given cached model
+                    # (SentenceTransformer.encode* is not thread-safe).
+                    instance._load_locks = {}
+                    instance._inference_locks = {}
                     cls._instance = instance
         return cls._instance
+
+    def _keyed_lock(self, registry: Dict[str, threading.Lock], key: str) -> threading.Lock:
+        """Return a lock for ``key`` from ``registry``, creating it if needed."""
+        with self._cache_lock:
+            lock = registry.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                registry[key] = lock
+            return lock
 
     def get(self, key: str) -> Optional[Any]:
         """Get a cached model.
@@ -150,10 +166,22 @@ class ModelCache:
         with self._cache_lock:
             self._cache.clear()
 
+    def get_inference_lock(self, key: str) -> threading.Lock:
+        """Return the per-key lock guarding inference on the cached model.
+
+        ``SentenceTransformer.encode*`` is not contractually thread-safe, so
+        concurrent embeds that share one cached model (e.g. the async path
+        dispatching to worker threads) must serialize their forward passes.
+        """
+        return self._keyed_lock(self._inference_locks, key)
+
     def get_or_load(self, key: str, loader: Callable[[], Any]) -> Any:
         """Get a cached model or load it if not cached.
 
-        Thread-safe: holds the lock for the full check-load-store sequence.
+        Uses a per-key load lock so only concurrent loads of the *same* key
+        serialize: a multi-second cold load of one model never blocks callers
+        requesting a different, already-cached model. (Holding the single cache
+        lock across the whole load would serialize unrelated keys.)
 
         Args:
             key: Cache key.
@@ -162,9 +190,14 @@ class ModelCache:
         Returns:
             The cached or newly loaded model.
         """
-        with self._cache_lock:
-            model = self._cache.get(key)
+        model = self.get(key)
+        if model is not None:
+            return model
+        with self._keyed_lock(self._load_locks, key):
+            # Re-check under the per-key lock: another thread may have finished
+            # loading this key while we waited.
+            model = self.get(key)
             if model is None:
                 model = loader()
-                self._cache[key] = model
+                self.set(key, model)
             return model
