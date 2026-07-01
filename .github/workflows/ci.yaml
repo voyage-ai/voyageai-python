@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
+      # Run one Python version at a time: this job runs the full suite against
+      # the live API (incl. token-heavy voyage-multimodal-3.5), and running the
+      # whole matrix in parallel exceeds the project's per-minute token (TPM)
+      # rate limit, turning real assertions into spurious RateLimitError failures.
+      max-parallel: 1
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
@@ -118,5 +123,20 @@ jobs:
       run: sudo apt-get install -y libopenblas-dev
     - name: Install package with all extras
       run: $POETRY_HOME/bin/poetry install --extras "video local"
-    - name: Run all tests
-      run: $POETRY_HOME/bin/poetry run pytest
+    - name: Run tests with coverage
+      run: $POETRY_HOME/bin/poetry run pytest --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
+    - name: Enforce coverage threshold
+      # Gate once, on a single canonical version (3.12), not on every matrix
+      # entry. This job runs the full suite (all extras + live API), so the
+      # coverage measured here is the meaningful number; 90% leaves headroom so a
+      # single flaky API test or a small uncovered addition doesn't red the build.
+      if: matrix.python-version == '3.12'
+      run: $POETRY_HOME/bin/poetry run coverage report --fail-under=90
+    - name: Upload coverage report
+      # always() so the report is still uploaded when the threshold gate fails,
+      # which is exactly when it's most useful for diagnosis.
+      if: always() && matrix.python-version == '3.12'
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      with:
+        name: coverage-report
+        path: coverage.xml

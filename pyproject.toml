@@ -43,6 +43,7 @@ local = ["sentence-transformers", "torch", "transformers", "scipy"]
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
 pytest-asyncio = "^0.21.1"
+pytest-cov = ">=4.0"
 ruff = "^0.6.0"
 
 [tool.ruff]
