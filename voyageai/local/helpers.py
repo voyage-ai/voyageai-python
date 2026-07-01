@@ -62,6 +62,16 @@ def embed_local(
     if not texts:
         raise InvalidRequestError("inputs must not be empty.")
 
+    # The hosted API caps the input list (see docs / tests/test_client.py::
+    # test_client_embed_batch_size). Enforce the same limit here, before loading
+    # the model, so an oversized batch raises the same error on both paths.
+    max_batch_size = LOCAL_MODELS[model].max_batch_size
+    if len(texts) > max_batch_size:
+        raise InvalidRequestError(
+            f"The number of inputs ({len(texts)}) exceeds the maximum "
+            f"batch size of {max_batch_size}."
+        )
+
     backend = get_local_backend(model)
 
     embeddings_array, total_tokens = backend.encode(

@@ -17,6 +17,9 @@ class LocalModelConfig:
     supported_dimensions: tuple
     supported_precisions: tuple
     trust_remote_code: bool = True
+    # Max inputs per embed() call. Matches the hosted API's documented list limit
+    # so the same call raises InvalidRequestError on both the API and local paths.
+    max_batch_size: int = 1000
 
     def validate_dimension(self, dimension: Optional[int]) -> int:
         """Validate and return the dimension to use.
@@ -75,6 +78,7 @@ SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
         # sentence_transformer_backend.py).
         supported_precisions=("float32", "float", "binary", "ubinary"),
         trust_remote_code=True,
+        max_batch_size=1000,
     ),
 }
 

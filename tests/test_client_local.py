@@ -256,6 +256,14 @@ class TestLocalInputValidation:
         with pytest.raises(InvalidRequestError):
             Client().embed(None, model="voyage-4-nano")
 
+    def test_batch_over_limit_raises(self):
+        """A batch larger than the documented 1000-input limit must raise
+        InvalidRequestError, matching the hosted API (rejected before model load)."""
+        from voyageai import Client
+
+        with pytest.raises(InvalidRequestError):
+            Client().embed(["x"] * 1001, model="voyage-4-nano")
+
 
 class TestKeylessApiGate:
     """A keyless client is allowed (for local models) but every API-backed method
