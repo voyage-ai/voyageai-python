@@ -42,6 +42,18 @@ from voyageai.embeddings_utils import (
 )
 from voyageai.version import VERSION
 
+
+def __getattr__(name: str):
+    # `HAS_LOCAL` is resolved lazily so that `import voyageai` never imports
+    # torch / sentence-transformers; module-level __getattr__ already provides
+    # exactly this deferral on first attribute access.
+    if name == "HAS_LOCAL":
+        from voyageai.local import _is_local_available
+
+        return _is_local_available()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 if TYPE_CHECKING:
     import requests
     from aiohttp import ClientSession

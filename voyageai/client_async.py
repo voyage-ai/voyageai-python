@@ -1,3 +1,4 @@
+import asyncio
 import warnings
 from typing import Callable, Dict, List, Optional, Union
 
@@ -21,6 +22,7 @@ from voyageai.error import (
     ServiceUnavailableError,
     Timeout,
 )
+from voyageai.local.helpers import embed_local, is_local_model
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
     EmbeddingsObject,
@@ -35,7 +37,7 @@ class AsyncClient(_BaseClient):
     """Voyage AI Async Client
 
     Args:
-        api_key (str): Your API key.
+        api_key (str): Your API key (not required for local models).
         max_retries (int): Maximum number of retries if API call fails.
         timeout (float): Timeout in seconds.
         base_url (str): Base URL for the API endpoint.
@@ -80,6 +82,21 @@ class AsyncClient(_BaseClient):
                 "provided by Voyage AI."
             )
 
+        # Check if this is a local model
+        if is_local_model(model):
+            return await asyncio.to_thread(
+                embed_local,
+                texts=texts,
+                model=model,
+                input_type=input_type,
+                truncation=truncation,
+                output_dtype=output_dtype,
+                output_dimension=output_dimension,
+            )
+
+        # API models require an API key
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -111,6 +128,8 @@ class AsyncClient(_BaseClient):
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
+        self._require_api_key()
+
         normalized_inputs, extra_kwargs = validate_and_normalize_contextualized_inputs(
             inputs=inputs,
             input_type=input_type,
@@ -155,6 +174,8 @@ class AsyncClient(_BaseClient):
         top_k: Optional[int] = None,
         truncation: bool = True,
     ) -> RerankingObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -182,6 +203,8 @@ class AsyncClient(_BaseClient):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> MultimodalEmbeddingsObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
