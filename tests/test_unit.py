@@ -810,10 +810,17 @@ class TestVideoUtilsIntegration:
 
         assert _compute_basic_usage_for_path("/nonexistent.mp4", model="x") == (None, None, None)
 
-    def test_get_video_token_config(self):
+    def test_get_video_token_config(self, tmp_path):
         from voyageai.video_utils import _get_video_token_config
 
-        config = _get_video_token_config("voyage-multimodal-3.5")
+        config_file = tmp_path / "client_config.json"
+        config_file.write_text(json.dumps({
+            "multimodal_video_pixels_min": 100,
+            "multimodal_video_pixels_max": 1000000,
+            "multimodal_video_to_tokens_ratio": 100,
+        }))
+        with patch("voyageai._base.hf_hub_download", return_value=str(config_file)):
+            config = _get_video_token_config("voyage-multimodal-3.5")
         assert config is not None
         assert all(v > 0 for v in config)
 
