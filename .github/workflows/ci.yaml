@@ -84,9 +84,15 @@ jobs:
     - name: Run local model tests (no API key)
       run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
 
-  # Full integration tests with API key and all dependencies
+  # Full integration tests with API key and all dependencies.
+  #
+  # Only runs where repository secrets are available: on push to main and on
+  # PRs from branches in this repo. GitHub does not pass secrets to workflows
+  # triggered by pull_request from a fork, so this job would always fail there;
+  # skip it on fork PRs and rely on the post-merge run on main instead (#69).
   integration-tests:
     name: Integration Tests
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -143,24 +149,25 @@ jobs:
 
   # Legacy required-check bridge.
   #
-  # This commit split the old single "Tests" job into three real jobs above
-  # (unit-tests-no-local-deps, local-model-tests, integration-tests). Branch
-  # protection on main, however, still requires the old contexts
-  # "Tests (3.9)".."Tests (3.12)", which no longer exist -> every PR that lands
-  # this restructure is stuck in BLOCKED because those required checks never
-  # report.
+  # A previous change split the old single "Tests" job into three real jobs
+  # above. Branch protection on main still requires the old contexts
+  # "Tests (3.9)".."Tests (3.12)", which no longer exist as real jobs, so this
+  # thin aggregate re-emits them.
   #
-  # This thin aggregate job runs no tests; it only re-emits the required
-  # "Tests (<pyver>)" contexts and passes iff all three real jobs pass, so the
-  # required check still reflects a green suite. Remove this job once an admin
-  # updates branch protection to the new job names (tracked in #68).
+  # It depends only on the fork-safe jobs (no API key required), so the required
+  # "Tests (<pyver>)" contexts can go green on fork PRs. integration-tests is
+  # deliberately excluded: it needs secrets that fork PRs never receive, and is
+  # covered post-merge by the push-to-main run instead (#69).
+  #
+  # Remove this job once an admin updates branch protection to the new job names
+  # (tracked in #68).
   tests:
     name: Tests
-    needs: [unit-tests-no-local-deps, local-model-tests, integration-tests]
+    needs: [unit-tests-no-local-deps, local-model-tests]
     runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
     - name: Required test jobs passed
-      run: echo "unit + local-model + integration jobs succeeded (py ${{ matrix.python-version }})"
+      run: echo "unit + local-model jobs succeeded (py ${{ matrix.python-version }})"
