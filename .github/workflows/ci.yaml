@@ -13,54 +13,36 @@ env:
 jobs:
   # Keyless unit tests without local dependencies.
   #
-  # Runs the mock/offline suite (no VOYAGE_API_KEY, no local extras): pure unit
-  # tests, video utils, import-order, and the import-error path that only
-  # triggers when local deps are absent. Makes zero API calls, so it is
-  # fork-safe and feeds the required "Tests" bridge.
+  # Runs the hermetic, offline suite (no VOYAGE_API_KEY, no local extras, no
+  # network): mock unit tests, import-order, and the import-error path that
+  # only triggers when local deps are absent. Makes zero API/network calls, so
+  # it is fork-safe and feeds the required "Tests" bridge.
   #
-  # Matrix is the required set (3.9-3.12) only. 3.13/3.14 run in the separate
-  # advisory job below so a failure on a non-required version cannot fail this
-  # job and skip the bridge.
+  # test_video_utils.py is intentionally excluded: its e2e leg calls
+  # _get_client_config() -> hf_hub_download() with no offline fallback, i.e. it
+  # needs the HuggingFace Hub and would make a required check flaky on HF
+  # outages. It runs in integration-tests instead.
+  #
+  # Matrix is the required set (3.9-3.12) only; 3.13/3.14 run in the advisory
+  # job below so a non-required leg can't fail the job and skip the bridge.
   unit-tests-no-local-deps:
     name: Unit Tests (no local deps)
     runs-on: ubuntu-22.04
     strategy:
-      # No max-parallel cap: no API key, no local extras -> zero API calls, so
-      # the TPM rate limit that serializes integration-tests does not apply.
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install package (with video extra, without local extras)
-      run: $POETRY_HOME/bin/poetry install --extras video
-    - name: Run keyless unit tests (no API key, no local deps)
-      run: >-
-        $POETRY_HOME/bin/poetry run pytest
-        tests/test_unit.py tests/test_video_utils.py tests/test_import_order.py
-        tests/test_client_local.py tests/test_client_local_async.py -v
+        extras: video
+        pytest-args: tests/test_unit.py tests/test_import_order.py tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Advisory: same keyless suite on newer Python versions not in the required
-  # set. Red on failure (visible), but not a dependency of the "Tests" bridge,
-  # so a 3.13/3.14 break does not block merges; a rerun turns it green.
+  # set. Red on failure (visible), but not a "Tests" bridge dependency, so a
+  # 3.13/3.14 break does not block merges; a rerun turns it green.
   unit-tests-no-local-deps-next:
     name: Unit Tests (no local deps, 3.13+)
     runs-on: ubuntu-22.04
@@ -69,36 +51,15 @@ jobs:
       matrix:
         python-version: ["3.13", "3.14"]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install package (with video extra, without local extras)
-      run: $POETRY_HOME/bin/poetry install --extras video
-    - name: Run keyless unit tests (no API key, no local deps)
-      run: >-
-        $POETRY_HOME/bin/poetry run pytest
-        tests/test_unit.py tests/test_video_utils.py tests/test_import_order.py
-        tests/test_client_local.py tests/test_client_local_async.py -v
+        extras: video
+        pytest-args: tests/test_unit.py tests/test_import_order.py tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Local model tests with local dependencies but no API key. Fork-safe; feeds
-  # the required "Tests" bridge. Required set (3.9-3.12) only; see the advisory
-  # job below for 3.13/3.14.
+  # the required "Tests" bridge. Required set (3.9-3.12) only.
   local-model-tests:
     name: Local Model Tests
     runs-on: ubuntu-22.04
@@ -107,31 +68,13 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install OpenBLAS (needed for scipy build on 3.13+)
-      run: sudo apt-get install -y libopenblas-dev
-    - name: Install package with all extras
-      run: $POETRY_HOME/bin/poetry install --extras "video local"
-    - name: Run local model tests (no API key)
-      run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
+        extras: video local
+        install-openblas: "true"
+        pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Advisory: local model tests on newer Python versions not in the required
   # set. Red on failure but not a bridge dependency (does not block merges).
@@ -143,31 +86,13 @@ jobs:
       matrix:
         python-version: ["3.13", "3.14"]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install OpenBLAS (needed for scipy build on 3.13+)
-      run: sudo apt-get install -y libopenblas-dev
-    - name: Install package with all extras
-      run: $POETRY_HOME/bin/poetry install --extras "video local"
-    - name: Run local model tests (no API key)
-      run: $POETRY_HOME/bin/poetry run pytest tests/test_client_local.py tests/test_client_local_async.py -v
+        extras: video local
+        install-openblas: "true"
+        pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Full integration tests with API key and all dependencies.
   #
@@ -191,31 +116,13 @@ jobs:
     env:
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install OpenBLAS (needed for scipy build on 3.13+)
-      run: sudo apt-get install -y libopenblas-dev
-    - name: Install package with all extras
-      run: $POETRY_HOME/bin/poetry install --extras "video local"
-    - name: Run tests with coverage
-      run: $POETRY_HOME/bin/poetry run pytest --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
+        extras: video local
+        install-openblas: "true"
+        pytest-args: --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
     - name: Enforce coverage threshold
       # Gate once, on a single canonical version (3.12), not on every matrix
       # entry. This job runs the full suite (all extras + live API), so the
