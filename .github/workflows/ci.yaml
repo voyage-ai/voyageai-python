@@ -7,6 +7,13 @@ on:
     branches: [ "main" ]
   workflow_call:
 
+# Cancel superseded runs on the same PR to save CI minutes (integration is a
+# ~2h serial matrix). Not cancelled on main so every pushed commit is validated
+# post-merge (the real integration gate).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   POETRY_HOME: "/opt/poetry"
 
@@ -74,6 +81,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         extras: video local
         install-openblas: "true"
+        cache-hf: "true"
         pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Advisory: local model tests on newer Python versions not in the required
@@ -92,6 +100,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         extras: video local
         install-openblas: "true"
+        cache-hf: "true"
         pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
 
   # Full integration tests with API key and all dependencies.
@@ -122,6 +131,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         extras: video local
         install-openblas: "true"
+        cache-hf: "true"
         pytest-args: --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
     - name: Enforce coverage threshold
       # Gate once, on a single canonical version (3.12), not on every matrix
