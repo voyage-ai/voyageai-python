@@ -67,7 +67,9 @@ async def _aget_embeddings(
     async with semaphore:
         async with rate_limit:
             data = (
-                await voyageai.Embedding.acreate(input=list_of_text, model=model, **kwargs)
+                await voyageai.Embedding.acreate(
+                    input=list_of_text, model=model, input_type=input_type, **kwargs
+                )
             ).data
 
     return [d["embedding"] for d in data]

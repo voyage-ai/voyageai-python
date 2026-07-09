@@ -617,6 +617,17 @@ class TestEmbeddingsUtils:
             result = await _aget_embeddings(["a", "b"], model="voyage-3")
             assert result == [[0.1], [0.2]]
 
+    @pytest.mark.asyncio
+    async def test_aget_embeddings_forwards_input_type(self):
+        from voyageai.embeddings_utils import _aget_embeddings
+
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": [0.1]}]
+        with patch("voyageai.Embedding.acreate", return_value=mock_response) as mock_acreate:
+            await _aget_embeddings(["a"], model="voyage-3", input_type="query")
+
+        assert mock_acreate.call_args.kwargs["input_type"] == "query"
+
     def test_get_embedding_deprecation_warning(self):
         from voyageai.embeddings_utils import get_embedding
 
