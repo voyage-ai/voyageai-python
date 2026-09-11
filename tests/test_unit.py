@@ -328,6 +328,17 @@ class TestUtil:
     def test_get_default_base_url_mongodb(self):
         assert util.get_default_base_url("al-abc") == "https://ai.mongodb.com/v1"
 
+    def test_get_batch_base_url_voyage(self):
+        assert util.get_batch_base_url("pa-abc") == "https://batch.api.voyageai.com/v1"
+
+    def test_get_batch_base_url_mongodb(self):
+        # The batch subdomain only applies to the Voyage AI host; MongoDB is left as-is.
+        assert util.get_batch_base_url("al-abc") == "https://ai.mongodb.com/v1"
+
+    def test_get_batch_base_url_leaves_default_unchanged(self):
+        # Batch host derivation must not mutate the default base URL for other endpoints.
+        assert util.get_default_base_url("pa-abc") == "https://api.voyageai.com/v1"
+
     def test_resolve_numpy_dtype(self):
         assert util._resolve_numpy_dtype(None) == np.float32
         assert util._resolve_numpy_dtype("float") == np.float32

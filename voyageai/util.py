@@ -103,6 +103,24 @@ def get_default_base_url(api_key: str) -> str:
         return "https://api.voyageai.com/v1"
 
 
+def get_batch_base_url(api_key: str) -> str:
+    """Base URL for the batch and files APIs.
+
+    These endpoints are served from a dedicated ``batch.`` subdomain
+    (e.g. ``https://batch.api.voyageai.com/v1``) rather than the default host
+    used by embeddings, rerank, multimodal and contextualized embeddings. The
+    ``/v1`` path convention is preserved. This is not a breaking change: the
+    default base URL returned by :func:`get_default_base_url` is unchanged for
+    all other endpoints.
+
+    The MongoDB host (``al-`` keys) is left untouched, since the ``batch.``
+    subdomain only applies to the Voyage AI host.
+    """
+    return get_default_base_url(api_key).replace(
+        "https://api.voyageai.com", "https://batch.api.voyageai.com", 1
+    )
+
+
 def _resolve_numpy_dtype(dtype: Optional[str] = None) -> str:
     dtype_mapping = {
         None: np.float32,
