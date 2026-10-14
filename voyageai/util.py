@@ -12,6 +12,9 @@ from voyageai.error import AuthenticationError
 
 VOYAGE_LOG = os.environ.get("VOYAGE_LOG")
 
+# Hugging Face org hosting model tokenizers, client configs and local model weights.
+HF_ORG = "MongoDB"
+
 logger = logging.getLogger("voyage")
 
 __all__ = [
