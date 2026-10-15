@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
 from voyageai.error import InvalidRequestError
+from voyageai.util import HF_ORG
 
 # Maximum inputs per embed() call, matching the hosted API's documented list
 # limit (https://docs.voyageai.com/docs/embeddings) so an oversized batch raises
@@ -74,7 +75,7 @@ class LocalModelConfig:
 # Supported local models
 SUPPORTED_MODELS: Dict[str, LocalModelConfig] = {
     "voyage-4-nano": LocalModelConfig(
-        huggingface_id="voyageai/voyage-4-nano",
+        huggingface_id=f"{HF_ORG}/voyage-4-nano",
         max_tokens=32768,
         default_dimension=2048,
         supported_dimensions=(2048, 1024, 512, 256),
