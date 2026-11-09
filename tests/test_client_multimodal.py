@@ -81,7 +81,7 @@ sample_input_dict_url_01 = {
     "content": [
         {
             "type": "image_url",
-            "image_url": "https://www.voyageai.com/feature.png",
+            "image_url": "https://raw.githubusercontent.com/voyage-ai/voyageai-python/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg",
         },
     ],
 }
@@ -100,7 +100,7 @@ sample_input_dict_mixed_01 = {
         {"type": "text", "text": "this is an image of a blue sailboat on a lake."},
         {
             "type": "image_url",
-            "image_url": "https://www.voyageai.com/feature.png",
+            "image_url": "https://raw.githubusercontent.com/voyage-ai/voyageai-python/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg",
         },
     ],
 }
@@ -504,7 +504,7 @@ class TestClient:
             "content": [
                 {
                     "type": "image_url",
-                    "image_url": "https://github.com/voyage-ai/voyageai-python/blob/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg?raw=true",
+                    "image_url": "https://raw.githubusercontent.com/voyage-ai/voyageai-python/4333a2eee7c4558cf3d9ad5ac2576a98c94c363a/tests/example_image_01.jpg",
                 },
             ],
         }
