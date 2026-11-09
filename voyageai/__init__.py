@@ -25,6 +25,12 @@ from voyageai.api_resources import (
     MultimodalEmbedding,
     Reranking,
 )
+
+# Bind the ``error`` submodule onto the package eagerly and explicitly. Without
+# this, ``voyageai.error`` is only bound as an incidental side effect of another
+# submodule's import, which made late-bound ``voyageai.error.X`` accesses during
+# module load order-dependent and could raise AttributeError (issue #42).
+from voyageai import error
 from voyageai.chunking import default_chunk_fn
 from voyageai.client import Client
 from voyageai.client_async import AsyncClient
@@ -35,6 +41,18 @@ from voyageai.embeddings_utils import (
     get_embeddings,
 )
 from voyageai.version import VERSION
+
+
+def __getattr__(name: str):
+    # `HAS_LOCAL` is resolved lazily so that `import voyageai` never imports
+    # torch / sentence-transformers; module-level __getattr__ already provides
+    # exactly this deferral on first attribute access.
+    if name == "HAS_LOCAL":
+        from voyageai.local import _is_local_available
+
+        return _is_local_available()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 if TYPE_CHECKING:
     import requests

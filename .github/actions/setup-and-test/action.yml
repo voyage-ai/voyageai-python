@@ -1,0 +1,75 @@
+name: Setup and test
+description: >-
+  Install ffmpeg, poetry and the package (with the given extras), then run
+  pytest with the given arguments. Shared by every test job in ci.yaml so the
+  install boilerplate lives in one place.
+
+inputs:
+  python-version:
+    description: Python version to set up.
+    required: true
+  extras:
+    description: Poetry extras to install, e.g. "video" or "video local".
+    required: true
+  pytest-args:
+    description: Arguments passed to `pytest` (test paths, markers, flags).
+    required: true
+  install-openblas:
+    description: Install libopenblas-dev (needed to build scipy on 3.13+).
+    required: false
+    default: "false"
+  cache-hf:
+    description: >-
+      Cache ~/.cache/huggingface. Enable for jobs that load the local model:
+      huggingface_hub falls back to the cache when the Hub is unreachable, so a
+      populated cache keeps an HF outage from failing the run.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Cache HuggingFace models
+      if: inputs.cache-hf == 'true'
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/.cache/huggingface
+        key: hf-${{ runner.os }}-voyage-4-nano
+        restore-keys: |
+          hf-${{ runner.os }}-
+    - name: Install poetry
+      shell: bash
+      run: |
+        python3 -m venv /opt/poetry
+        /opt/poetry/bin/pip install poetry==1.8.4
+        /opt/poetry/bin/poetry --version
+    - name: Install ffmpeg 7
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        ffmpeg -version
+    - name: Install OpenBLAS (needed for scipy build on 3.13+)
+      if: inputs.install-openblas == 'true'
+      shell: bash
+      run: sudo apt-get install -y libopenblas-dev
+    - name: Install package
+      shell: bash
+      # Pass inputs via env, not direct ${{ }} interpolation into the script.
+      env:
+        EXTRAS: ${{ inputs.extras }}
+      run: /opt/poetry/bin/poetry install --extras "$EXTRAS"
+    - name: Run pytest
+      shell: bash
+      env:
+        PYTEST_ARGS: ${{ inputs.pytest-args }}
+      # PYTEST_ARGS is a space-separated list of paths/flags and must word-split.
+      # shellcheck disable=SC2086
+      run: /opt/poetry/bin/poetry run pytest $PYTEST_ARGS

@@ -1,3 +1,4 @@
+import asyncio
 import warnings
 from typing import Callable, Dict, List, Optional, Union
 
@@ -10,12 +11,18 @@ from tenacity import (
 )
 
 import voyageai
-import voyageai.error as error
 from voyageai._base import _BaseClient
 from voyageai.chunking import (
     apply_chunking,
     validate_and_normalize_contextualized_inputs,
 )
+from voyageai.error import (
+    APIConnectionError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+)
+from voyageai.local.helpers import embed_local, is_local_model
 from voyageai.object import (
     ContextualizedEmbeddingsObject,
     EmbeddingsObject,
@@ -30,7 +37,7 @@ class AsyncClient(_BaseClient):
     """Voyage AI Async Client
 
     Args:
-        api_key (str): Your API key.
+        api_key (str): Your API key (not required for local models).
         max_retries (int): Maximum number of retries if API call fails.
         timeout (float): Timeout in seconds.
         base_url (str): Base URL for the API endpoint.
@@ -51,9 +58,9 @@ class AsyncClient(_BaseClient):
             stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential_jitter(initial=1, max=16),
             retry=(
-                retry_if_exception_type(error.RateLimitError)
-                | retry_if_exception_type(error.ServiceUnavailableError)
-                | retry_if_exception_type(error.Timeout)
+                retry_if_exception_type(RateLimitError)
+                | retry_if_exception_type(ServiceUnavailableError)
+                | retry_if_exception_type(Timeout)
             ),
         )
 
@@ -75,6 +82,21 @@ class AsyncClient(_BaseClient):
                 "provided by Voyage AI."
             )
 
+        # Check if this is a local model
+        if is_local_model(model):
+            return await asyncio.to_thread(
+                embed_local,
+                texts=texts,
+                model=model,
+                input_type=input_type,
+                truncation=truncation,
+                output_dtype=output_dtype,
+                output_dimension=output_dimension,
+            )
+
+        # API models require an API key
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -89,7 +111,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = EmbeddingsObject(response)
         return result
@@ -106,6 +128,8 @@ class AsyncClient(_BaseClient):
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
     ) -> ContextualizedEmbeddingsObject:
+        self._require_api_key()
+
         normalized_inputs, extra_kwargs = validate_and_normalize_contextualized_inputs(
             inputs=inputs,
             input_type=input_type,
@@ -133,7 +157,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         if chunk_fn:
             return ContextualizedEmbeddingsObject(
@@ -150,6 +174,8 @@ class AsyncClient(_BaseClient):
         top_k: Optional[int] = None,
         truncation: bool = True,
     ) -> RerankingObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -163,7 +189,7 @@ class AsyncClient(_BaseClient):
                 )
 
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = RerankingObject(documents, response)
         return result
@@ -177,6 +203,8 @@ class AsyncClient(_BaseClient):
         output_dtype: Optional[str] = None,
         output_dimension: Optional[int] = None,
     ) -> MultimodalEmbeddingsObject:
+        self._require_api_key()
+
         response = None
         async for attempt in self._make_retry_controller():
             with attempt:
@@ -192,7 +220,7 @@ class AsyncClient(_BaseClient):
                     **self._params,
                 )
         if response is None:
-            raise error.APIConnectionError("Failed to get response after all retry attempts")
+            raise APIConnectionError("Failed to get response after all retry attempts")
 
         result = MultimodalEmbeddingsObject(response)
         return result

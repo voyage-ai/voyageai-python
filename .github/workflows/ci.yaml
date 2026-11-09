@@ -7,38 +7,170 @@ on:
     branches: [ "main" ]
   workflow_call:
 
+# Cancel superseded runs on the same PR to save CI minutes (integration is a
+# ~2h serial matrix). Not cancelled on main so every pushed commit is validated
+# post-merge (the real integration gate).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  POETRY_HOME: "/opt/poetry"
+
 jobs:
-  test:
-    name: Tests
+  # Keyless unit tests without local dependencies.
+  #
+  # Runs the hermetic, offline suite (no VOYAGE_API_KEY, no local extras, no
+  # network): mock unit tests, import-order, and the import-error path that
+  # only triggers when local deps are absent. Makes zero API/network calls, so
+  # it is fork-safe and feeds the required "Tests" bridge.
+  #
+  # test_video_utils.py is intentionally excluded: its e2e leg calls
+  # _get_client_config() -> hf_hub_download() with no offline fallback, i.e. it
+  # needs the HuggingFace Hub and would make a required check flaky on HF
+  # outages. It runs in integration-tests instead.
+  #
+  # Matrix is the required set (3.9-3.12) only; 3.13/3.14 run in the advisory
+  # job below so a non-required leg can't fail the job and skip the bridge.
+  unit-tests-no-local-deps:
+    name: Unit Tests (no local deps)
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: video
+        pytest-args: tests/test_unit.py tests/test_import_order.py tests/test_client_local.py tests/test_client_local_async.py -v
+
+  # Advisory: same keyless suite on newer Python versions not in the required
+  # set. Red on failure (visible), but not a "Tests" bridge dependency, so a
+  # 3.13/3.14 break does not block merges; a rerun turns it green.
+  unit-tests-no-local-deps-next:
+    name: Unit Tests (no local deps, 3.13+)
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: video
+        pytest-args: tests/test_unit.py tests/test_import_order.py tests/test_client_local.py tests/test_client_local_async.py -v
+
+  # Local model tests with local dependencies but no API key. Fork-safe; feeds
+  # the required "Tests" bridge. Required set (3.9-3.12) only.
+  local-model-tests:
+    name: Local Model Tests
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: video local
+        install-openblas: "true"
+        cache-hf: "true"
+        pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
+
+  # Advisory: local model tests on newer Python versions not in the required
+  # set. Red on failure but not a bridge dependency (does not block merges).
+  local-model-tests-next:
+    name: Local Model Tests (3.13+)
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: video local
+        install-openblas: "true"
+        cache-hf: "true"
+        pytest-args: tests/test_client_local.py tests/test_client_local_async.py -v
+
+  # Full integration tests with API key and all dependencies.
+  #
+  # GitHub does not pass repository secrets to pull_request workflows from a
+  # fork, so this job is red on fork PRs (no VOYAGE_API_KEY) -- that is expected
+  # and handled by review, not automation: it must NOT be a required check.
+  # For same-repo PRs and push to main it runs for real and gates via review.
+  # It is intentionally not a dependency of the "Tests" bridge below.
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      # Run one Python version at a time: every job here hits the live API
+      # (incl. token-heavy voyage-multimodal-3.5), and running the whole matrix
+      # in parallel exceeds the project's per-minute token (TPM) rate limit,
+      # turning real assertions into spurious RateLimitError failures.
+      max-parallel: 1
+      matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     env:
       VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
-      POETRY_HOME: "/opt/poetry"
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: ./.github/actions/setup-and-test
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      run: |
-        python3 -m venv $POETRY_HOME
-        $POETRY_HOME/bin/pip install poetry==1.8.4
-        $POETRY_HOME/bin/poetry --version
-    - name: Install ffmpeg 7
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-        ffmpeg -version
-    - name: Install package (including video extra for multimodal tests)
-      run: $POETRY_HOME/bin/poetry install --extras video
-    - name: Run tests
-      run: $POETRY_HOME/bin/poetry run pytest
+        extras: video local
+        install-openblas: "true"
+        cache-hf: "true"
+        pytest-args: --cov=voyageai --cov-report=term-missing --cov-report=xml:coverage.xml
+    - name: Enforce coverage threshold
+      # Gate once, on a single canonical version (3.12), not on every matrix
+      # entry. This job runs the full suite (all extras + live API), so the
+      # coverage measured here is the meaningful number; 90% leaves headroom so a
+      # single flaky API test or a small uncovered addition doesn't red the build.
+      if: matrix.python-version == '3.12'
+      run: $POETRY_HOME/bin/poetry run coverage report --fail-under=90
+    - name: Upload coverage report
+      # always() so the report is still uploaded when the threshold gate fails,
+      # which is exactly when it's most useful for diagnosis.
+      if: always() && matrix.python-version == '3.12'
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      with:
+        name: coverage-report
+        path: coverage.xml
+
+  # Legacy required-check bridge.
+  #
+  # Branch protection on main requires the status contexts "Tests (3.9)"..
+  # "Tests (3.12)". No single job named "Tests" runs the suite anymore, so this
+  # thin aggregate re-emits those contexts. It depends only on the fork-safe,
+  # keyless jobs (which never need an API key), so the required contexts can go
+  # green on fork PRs. integration-tests is deliberately excluded: it needs
+  # secrets that fork PRs never receive.
+  #
+  # needs and matrix are both the required set (3.9-3.12): a job-level `needs`
+  # would otherwise let a non-required 3.13/3.14 leg fail its whole job and skip
+  # this bridge, leaving the required contexts unreported and the PR blocked.
+  #
+  # Safe to remove if/when branch protection is switched to require the real job
+  # names directly.
+  tests:
+    name: Tests
+    needs: [unit-tests-no-local-deps, local-model-tests]
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+    - name: Required test jobs passed
+      run: echo "keyless unit + local-model jobs succeeded (py ${{ matrix.python-version }})"
