@@ -22,7 +22,7 @@ from voyageai.object.multimodal_embeddings import (
     MultimodalInputSegmentVideoBase64,
     MultimodalInputSegmentVideoURL,
 )
-from voyageai.util import default_api_key, get_default_base_url
+from voyageai.util import HF_ORG, default_api_key, get_default_base_url
 from voyageai.video_utils import Video
 
 
@@ -30,7 +30,7 @@ def _get_client_config(
     model: str,
 ) -> dict:
     try:
-        config_path = hf_hub_download(repo_id=f"voyageai/{model}", filename="client_config.json")
+        config_path = hf_hub_download(repo_id=f"{HF_ORG}/{model}", filename="client_config.json")
         with open(config_path, "r") as f:
             data_dict = json.load(f)
     except:
@@ -157,7 +157,7 @@ class _BaseClient(ABC):
             )
 
         try:
-            tokenizer = Tokenizer.from_pretrained(f"voyageai/{model}")
+            tokenizer = Tokenizer.from_pretrained(f"{HF_ORG}/{model}")
             tokenizer.no_truncation()
         except:
             warnings.warn(
