@@ -24,14 +24,13 @@ TIMEOUT_SECS = 600
 MAX_SESSION_LIFETIME_SECS = 180
 MAX_CONNECTION_RETRIES = 2
 
+# Headers sent on API requests; everything else is stripped. The X-VoyageAI-*
+# client metadata matches the TypeScript SDK.
 _ALLOWED_HEADERS = frozenset(
     {
         "Authorization",
         "Content-Type",
         "User-Agent",
-        "X-Voyage-Client-User-Agent",
-        "X-Request-Id",
-        "Voyage-Debug",
         "X-VoyageAI-Lang",
         "X-VoyageAI-Package",
         "X-VoyageAI-Package-Version",

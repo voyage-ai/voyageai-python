@@ -27,38 +27,38 @@ from voyageai.util import default_api_key, get_default_base_url
 from voyageai.video_utils import Video
 
 
+def _detect(fn: Callable[[], str]) -> str:
+    """Return fn()'s value, or "unknown" if it fails or is empty, so detection
+    never breaks a request (same fallback as the TypeScript SDK)."""
+    try:
+        value = fn()
+    except Exception:
+        return "unknown"
+    return value or "unknown"
+
+
+def _package_version() -> str:
+    from voyageai.version import VERSION
+
+    return VERSION
+
+
 def _build_metadata_headers() -> Dict[str, str]:
-    headers: Dict[str, str] = {
+    package_version = _detect(_package_version)
+    runtime = _detect(platform.python_implementation)
+    runtime_version = _detect(platform.python_version)
+    os_name = _detect(platform.system)
+    return {
         "X-VoyageAI-Lang": "python",
         "X-VoyageAI-Package": "voyageai",
+        "X-VoyageAI-Package-Version": package_version,
+        "X-VoyageAI-Runtime": runtime,
+        "X-VoyageAI-Runtime-Version": runtime_version,
+        "X-VoyageAI-OS": os_name,
         "X-VoyageAI-Telemetry-Version": "1",
+        # Same format as the TypeScript SDK: voyageai-<lang>/<version> <Runtime>/<version> <OS>
+        "User-Agent": f"voyageai-python/{package_version} {runtime}/{runtime_version} {os_name}",
     }
-    try:
-        from voyageai.version import VERSION
-    except Exception:
-        VERSION = None
-
-    if VERSION:
-        headers["X-VoyageAI-Package-Version"] = VERSION
-    try:
-        headers["X-VoyageAI-Runtime"] = platform.python_implementation()
-        headers["X-VoyageAI-Runtime-Version"] = platform.python_version()
-    except Exception:
-        pass
-    try:
-        headers["X-VoyageAI-OS"] = platform.system()
-    except Exception:
-        pass
-    try:
-        ua_parts = [
-            f"voyageai-python/{VERSION}" if VERSION else "voyageai-python",
-            f"Python/{platform.python_version()}",
-            f"{platform.system()}/{platform.machine()}",
-        ]
-        headers["User-Agent"] = " ".join(ua_parts)
-    except Exception:
-        pass
-    return headers
 
 
 def _get_client_config(
@@ -124,16 +124,17 @@ class _BaseClient(ABC):
     def _validate_wrapper_field(field: str, value: str) -> str:
         if not isinstance(value, str):
             raise ValueError(f"Wrapper {field} must be a string, got {type(value).__name__}.")
+        # Checked before trimming, same rule as the TypeScript SDK: only printable
+        # ASCII (control characters are a header-injection risk, non-ASCII fails at
+        # request time), and "|" / "/" delimit the wrapper list.
+        if any(not 0x20 <= ord(c) <= 0x7E for c in value) or set("|/") & set(value):
+            raise ValueError(
+                f"Wrapper {field} {value!r} contains invalid characters "
+                "(only printable ASCII is allowed, and '|' / '/' are reserved)."
+            )
         stripped = value.strip()
         if not stripped:
             raise ValueError(f"Wrapper {field} must be a non-empty string.")
-        # Reject control characters (header-injection risk) and the "|"/"/"
-        # delimiters used to encode the wrapper list.
-        if any(ord(c) < 0x20 or ord(c) == 0x7F for c in stripped) or set("|/") & set(stripped):
-            raise ValueError(
-                f"Wrapper {field} {value!r} contains invalid characters "
-                "(control characters or the reserved '|' / '/' delimiters)."
-            )
         return stripped
 
     def append_client_metadata(self, name: str, version: str) -> None:

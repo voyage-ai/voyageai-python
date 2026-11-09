@@ -22,17 +22,47 @@ class TestBuildMetadataHeaders:
         headers = _build_metadata_headers()
         expected = (
             f"voyageai-python/{VERSION} "
-            f"Python/{platform.python_version()} "
-            f"{platform.system()}/{platform.machine()}"
+            f"{platform.python_implementation()}/{platform.python_version()} "
+            f"{platform.system()}"
         )
         assert headers["User-Agent"] == expected
 
-    def test_fail_open_on_version_error(self):
+    def test_failed_detection_sends_unknown(self):
         with patch("voyageai._base.platform.python_implementation", side_effect=OSError):
             headers = _build_metadata_headers()
         assert headers["X-VoyageAI-Lang"] == "python"
-        assert "X-VoyageAI-Runtime" not in headers
-        assert "X-VoyageAI-Runtime-Version" not in headers
+        assert headers["X-VoyageAI-Runtime"] == "unknown"
+        assert headers["X-VoyageAI-Runtime-Version"] == platform.python_version()
+        assert headers["User-Agent"].split(" ")[1] == f"unknown/{platform.python_version()}"
+
+    def test_empty_detection_sends_unknown(self):
+        with patch("voyageai._base.platform.system", return_value=""):
+            headers = _build_metadata_headers()
+        assert headers["X-VoyageAI-OS"] == "unknown"
+        assert headers["User-Agent"].endswith(" unknown")
+
+    def test_unavailable_package_version_sends_unknown(self):
+        with patch("voyageai._base._package_version", side_effect=Exception("no metadata")):
+            headers = _build_metadata_headers()
+        assert headers["X-VoyageAI-Package-Version"] == "unknown"
+        assert headers["User-Agent"].startswith("voyageai-python/unknown ")
+
+    def test_all_headers_always_present(self):
+        with (
+            patch("voyageai._base._package_version", side_effect=Exception),
+            patch("voyageai._base.platform.python_implementation", side_effect=OSError),
+            patch("voyageai._base.platform.python_version", side_effect=OSError),
+            patch("voyageai._base.platform.system", side_effect=OSError),
+        ):
+            headers = _build_metadata_headers()
+        for name in (
+            "X-VoyageAI-Package-Version",
+            "X-VoyageAI-Runtime",
+            "X-VoyageAI-Runtime-Version",
+            "X-VoyageAI-OS",
+        ):
+            assert headers[name] == "unknown"
+        assert headers["User-Agent"] == "voyageai-python/unknown unknown/unknown unknown"
 
 
 class TestClientMetadataHeaders:
@@ -89,6 +119,14 @@ class TestAppendClientMetadata:
             ("mem0/x", "1.0"),  # reserved name/version delimiter
             ("", "1.0"),  # empty name
             ("mem0", "   "),  # blank version
+            ("mem0", "1.0\x7f"),  # DEL control character
+            ("mem\t0", "1.0"),  # tab control character
+            ("mem0\x1f", "1.0"),  # control character at the edge (str.strip() would remove it)
+            ("\tmem0", "1.0"),  # leading tab is rejected, not trimmed
+            ("mem0é", "1.0"),  # non-ASCII
+            ("mem0", "1.0\u00a0"),  # non-breaking space
+            ("mem0\x85", "1.0"),  # NEL (str.strip() would remove it)
+            (123, "1.0"),  # not a string
         ],
     )
     def test_invalid_wrapper_fields_rejected(self, name, version):
@@ -97,9 +135,36 @@ class TestAppendClientMetadata:
             client.append_client_metadata(name=name, version=version)
         assert "X-VoyageAI-Wrapper" not in client._metadata_headers
 
+    def test_failed_append_keeps_existing_wrappers(self):
+        client = self._make_client()
+        client.append_client_metadata(name="mem0", version="1.2.3")
+        with pytest.raises(ValueError):
+            client.append_client_metadata(name="bad|name", version="1.0")
+        assert client._metadata_headers["X-VoyageAI-Wrapper"] == "mem0/1.2.3"
+
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("", "must be a non-empty string"),
+            ("   ", "must be a non-empty string"),
+            ("a|b", "contains invalid characters"),
+            ("a\nb", "contains invalid characters"),
+        ],
+    )
+    def test_invalid_wrapper_error_messages(self, name, expected):
+        client = self._make_client()
+        with pytest.raises(ValueError, match=expected):
+            client.append_client_metadata(name=name, version="1.0")
+
     def test_wrapper_fields_are_trimmed(self):
         client = self._make_client()
         client.append_client_metadata(name="  mem0  ", version=" 1.2.3 ")
+        assert client._metadata_headers["X-VoyageAI-Wrapper"] == "mem0/1.2.3"
+
+    def test_dedupe_uses_trimmed_values(self):
+        client = self._make_client()
+        client.append_client_metadata(name="mem0", version="1.2.3")
+        client.append_client_metadata(name=" mem0 ", version="1.2.3 ")
         assert client._metadata_headers["X-VoyageAI-Wrapper"] == "mem0/1.2.3"
 
 
@@ -157,6 +222,31 @@ class TestHeadersFlowToRequest:
 
         assert "X-Evil-Header" not in captured_headers
         assert "X-VoyageAI-Lang" in captured_headers
+
+    def test_legacy_client_headers_not_sent(self, monkeypatch):
+        captured_headers = {}
+
+        class FakeResponse:
+            status_code = 200
+            headers = {"Content-Type": "application/json"}
+            content = b'{"data": [{"embedding": [0.1]}], "usage": {"total_tokens": 5}}'
+
+        def fake_request(self, method, url, **kwargs):
+            captured_headers.update(kwargs.get("headers", {}))
+            return FakeResponse()
+
+        import requests
+
+        monkeypatch.setattr(requests.Session, "request", fake_request)
+        monkeypatch.setattr(voyageai, "debug", True)
+
+        client = voyageai.Client(api_key="test-key")
+        client.embed(texts=["hello"], model="voyage-2")
+
+        # Only the X-VoyageAI-* metadata is added; the legacy headers stay stripped as before.
+        assert "X-Voyage-Client-User-Agent" not in captured_headers
+        assert "Voyage-Debug" not in captured_headers
+        assert "X-Request-Id" not in captured_headers
 
     def test_app_info_preserved_in_user_agent(self, monkeypatch):
         captured_headers = {}
