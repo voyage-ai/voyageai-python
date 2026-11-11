@@ -2,6 +2,7 @@ import base64
 import functools
 import io
 import json
+import platform
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -22,15 +23,49 @@ from voyageai.object.multimodal_embeddings import (
     MultimodalInputSegmentVideoBase64,
     MultimodalInputSegmentVideoURL,
 )
-from voyageai.util import default_api_key, get_default_base_url
+from voyageai.util import HF_ORG, default_api_key, get_default_base_url
 from voyageai.video_utils import Video
+
+
+def _detect(fn: Callable[[], str]) -> str:
+    """Return fn()'s value, or "unknown" if it fails or is empty, so detection
+    never breaks a request (same fallback as the TypeScript SDK)."""
+    try:
+        value = fn()
+    except Exception:
+        return "unknown"
+    return value or "unknown"
+
+
+def _package_version() -> str:
+    from voyageai.version import VERSION
+
+    return VERSION
+
+
+def _build_metadata_headers() -> Dict[str, str]:
+    package_version = _detect(_package_version)
+    runtime = _detect(platform.python_implementation)
+    runtime_version = _detect(platform.python_version)
+    os_name = _detect(platform.system)
+    return {
+        "X-VoyageAI-Lang": "python",
+        "X-VoyageAI-Package": "voyageai",
+        "X-VoyageAI-Package-Version": package_version,
+        "X-VoyageAI-Runtime": runtime,
+        "X-VoyageAI-Runtime-Version": runtime_version,
+        "X-VoyageAI-OS": os_name,
+        "X-VoyageAI-Telemetry-Version": "1",
+        # Same format as the TypeScript SDK: voyageai-<lang>/<version> <Runtime>/<version> <OS>
+        "User-Agent": f"voyageai-python/{package_version} {runtime}/{runtime_version} {os_name}",
+    }
 
 
 def _get_client_config(
     model: str,
 ) -> dict:
     try:
-        config_path = hf_hub_download(repo_id=f"voyageai/{model}", filename="client_config.json")
+        config_path = hf_hub_download(repo_id=f"{HF_ORG}/{model}", filename="client_config.json")
         with open(config_path, "r") as f:
             data_dict = json.load(f)
     except:
@@ -77,11 +112,42 @@ class _BaseClient(ABC):
         if self.api_key:
             base_url = base_url or get_default_base_url(self.api_key)
 
+        self._metadata_headers = _build_metadata_headers()
         self._params = {
             "api_key": self.api_key,
             "request_timeout": timeout,
             "base_url": base_url,
+            "headers": self._metadata_headers,
         }
+
+    @staticmethod
+    def _validate_wrapper_field(field: str, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError(f"Wrapper {field} must be a string, got {type(value).__name__}.")
+        # Checked before trimming, same rule as the TypeScript SDK: only printable
+        # ASCII (control characters are a header-injection risk, non-ASCII fails at
+        # request time), and "|" / "/" delimit the wrapper list.
+        if any(not 0x20 <= ord(c) <= 0x7E for c in value) or set("|/") & set(value):
+            raise ValueError(
+                f"Wrapper {field} {value!r} contains invalid characters "
+                "(only printable ASCII is allowed, and '|' / '/' are reserved)."
+            )
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError(f"Wrapper {field} must be a non-empty string.")
+        return stripped
+
+    def append_client_metadata(self, name: str, version: str) -> None:
+        """Record an integration wrapper (e.g. a framework that embeds this
+        client) in the X-VoyageAI-Wrapper header."""
+        name = self._validate_wrapper_field("name", name)
+        version = self._validate_wrapper_field("version", version)
+        wrapper_value = f"{name}/{version}"
+        current = self._metadata_headers.get("X-VoyageAI-Wrapper", "")
+        existing = [w for w in current.split("|") if w] if current else []
+        if wrapper_value not in existing:
+            existing.append(wrapper_value)
+            self._metadata_headers["X-VoyageAI-Wrapper"] = "|".join(existing)
 
     def _require_api_key(self) -> None:
         """Raise a clear error if no API key is configured.
@@ -157,7 +223,7 @@ class _BaseClient(ABC):
             )
 
         try:
-            tokenizer = Tokenizer.from_pretrained(f"voyageai/{model}")
+            tokenizer = Tokenizer.from_pretrained(f"{HF_ORG}/{model}")
             tokenizer.no_truncation()
         except:
             warnings.warn(
