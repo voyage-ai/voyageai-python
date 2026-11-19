@@ -28,6 +28,10 @@ class APIResource(VoyageResponse):
 
         url = cls.class_url()
         headers = params.pop("headers", None)
+        model = params.get("model")
+        if isinstance(model, str) and model:
+            # Copy so the per-request model never leaks into the client's shared headers.
+            headers = {**(headers or {}), "X-Voyage-Model": model}
 
         return requestor, url, params, headers
 
