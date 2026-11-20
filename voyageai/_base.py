@@ -2,7 +2,6 @@ import base64
 import functools
 import io
 import json
-import platform
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -27,38 +26,19 @@ from voyageai.util import HF_ORG, default_api_key, get_default_base_url
 from voyageai.video_utils import Video
 
 
-def _detect(fn: Callable[[], str]) -> str:
-    """Return fn()'s value, or "unknown" if it fails or is empty, so detection
-    never breaks a request (same fallback as the TypeScript SDK)."""
+def _package_version() -> str:
+    """Return the installed SDK version, or "unknown" so header building never
+    breaks a request."""
     try:
-        value = fn()
+        from voyageai.version import VERSION
     except Exception:
         return "unknown"
-    return value or "unknown"
-
-
-def _package_version() -> str:
-    from voyageai.version import VERSION
-
-    return VERSION
+    return VERSION or "unknown"
 
 
 def _build_metadata_headers() -> Dict[str, str]:
-    package_version = _detect(_package_version)
-    runtime = _detect(platform.python_implementation)
-    runtime_version = _detect(platform.python_version)
-    os_name = _detect(platform.system)
-    return {
-        "X-VoyageAI-Lang": "python",
-        "X-VoyageAI-Package": "voyageai",
-        "X-VoyageAI-Package-Version": package_version,
-        "X-VoyageAI-Runtime": runtime,
-        "X-VoyageAI-Runtime-Version": runtime_version,
-        "X-VoyageAI-OS": os_name,
-        "X-VoyageAI-Telemetry-Version": "1",
-        # Same format as the TypeScript SDK: voyageai-<lang>/<version> <Runtime>/<version> <OS>
-        "User-Agent": f"voyageai-python/{package_version} {runtime}/{runtime_version} {os_name}",
-    }
+    # SDK identity goes in User-Agent: voyageai-<lang>/<version>.
+    return {"User-Agent": f"voyageai-python/{_package_version()}"}
 
 
 def _get_client_config(
@@ -139,15 +119,15 @@ class _BaseClient(ABC):
 
     def append_client_metadata(self, name: str, version: str) -> None:
         """Record an integration wrapper (e.g. a framework that embeds this
-        client) in the X-VoyageAI-Wrapper header."""
+        client) in the X-Voyage-Wrapper header."""
         name = self._validate_wrapper_field("name", name)
         version = self._validate_wrapper_field("version", version)
         wrapper_value = f"{name}/{version}"
-        current = self._metadata_headers.get("X-VoyageAI-Wrapper", "")
+        current = self._metadata_headers.get("X-Voyage-Wrapper", "")
         existing = [w for w in current.split("|") if w] if current else []
         if wrapper_value not in existing:
             existing.append(wrapper_value)
-            self._metadata_headers["X-VoyageAI-Wrapper"] = "|".join(existing)
+            self._metadata_headers["X-Voyage-Wrapper"] = "|".join(existing)
 
     def _require_api_key(self) -> None:
         """Raise a clear error if no API key is configured.

@@ -28,6 +28,12 @@ class APIResource(VoyageResponse):
 
         url = cls.class_url()
         headers = params.pop("headers", None)
+        # X-Voyage-Model is required on every request and must match the body's model.
+        model = params.get("model")
+        if not isinstance(model, str) or not model:
+            raise ValueError("A non-empty `model` string is required for every request.")
+        # Copy so the per-request model never leaks into the client's shared headers.
+        headers = {**(headers or {}), "X-Voyage-Model": model}
 
         return requestor, url, params, headers
 
