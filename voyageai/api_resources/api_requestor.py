@@ -24,22 +24,16 @@ TIMEOUT_SECS = 600
 MAX_SESSION_LIFETIME_SECS = 180
 MAX_CONNECTION_RETRIES = 2
 
-# Headers sent on API requests; everything else is stripped. The X-Voyage-*
-# client metadata matches the TypeScript SDK.
+# Headers sent on API requests; everything else is stripped. Must match the
+# TypeScript SDK: User-Agent carries the SDK identity, X-Voyage-Wrapper lists
+# wrapping integrations and X-Voyage-Model (required) mirrors the body's model.
 _ALLOWED_HEADERS = frozenset(
     {
         "Authorization",
         "Content-Type",
         "User-Agent",
-        "X-Voyage-Lang",
-        "X-Voyage-Package",
-        "X-Voyage-Package-Version",
-        "X-Voyage-Runtime",
-        "X-Voyage-Runtime-Version",
-        "X-Voyage-OS",
         "X-Voyage-Wrapper",
         "X-Voyage-Model",
-        "X-Voyage-Telemetry-Version",
     }
 )
 
@@ -246,7 +240,7 @@ class APIRequestor:
             headers["Voyage-Debug"] = "true"
         headers.update(extra)
         # Re-apply app_info after merging client metadata headers so a custom
-        # User-Agent (e.g. the X-Voyage metadata UA) keeps carrying it.
+        # User-Agent (the voyageai-python/<version> UA) keeps carrying it.
         if voyageai.app_info and headers.get("User-Agent"):
             headers["User-Agent"] += " " + self.format_app_info(voyageai.app_info)
         for key in list(headers.keys()):
